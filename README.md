@@ -1,3 +1,7 @@
+<p align="right">
+  <a href="README.md"><kbd><b>简体中文</b></kbd></a>&nbsp;&nbsp;<a href="README.en.md"><kbd>English</kbd></a>
+</p>
+
 # 简包装-应用安装向导打包软件
 
 一个面向中文用户的可视化安装包制作工具 —— 把 Inno Setup Compiler 那套功能里
