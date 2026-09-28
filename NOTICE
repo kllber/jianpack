@@ -1,0 +1,20 @@
+简包装 (JianPack)
+Copyright 2026 kllber
+
+This product is licensed under the Apache License, Version 2.0.
+本项目遵循 Apache License 2.0 许可协议。
+
+Project home / 项目主页:
+    https://github.com/kllber/jianpack
+
+Author / 作者:
+    kllber  <1394141383@qq.com>
+
+---
+
+Third-party components bundled with the distributed build
+(portable package / exe) are listed together with their licenses in:
+
+    分发版（便携包 / exe）中捆绑的第三方组件及其许可，见：
+
+    THIRD-PARTY-NOTICES.md

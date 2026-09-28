@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://github.com/kllber/jianpack/releases/latest"><img alt="Version" src="https://img.shields.io/badge/version-0.1.0-2ea44f"></a>
-  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
+  <a href="LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue"></a>
   <img alt="Platform: Windows 10 / 11" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D6">
   <img alt="Python 3.10+" src="https://img.shields.io/badge/python-3.10%2B-3776AB">
   <img alt="Engine: NSIS" src="https://img.shields.io/badge/engine-NSIS-orange">
@@ -364,6 +364,7 @@ dist/                      Build output
 - Author: **kllber**
 - GitHub: <https://github.com/kllber>
 - Email: 1394141383@qq.com
+- License: **Apache-2.0** (see [LICENSE](LICENSE) and [NOTICE](NOTICE))
 
 This is an **open-source tool** — use it, distribute it, and report issues. Development
 was assisted by **DeepSeek V4.1 Flash**.

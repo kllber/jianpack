@@ -1,12 +1,16 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "app-installer-packer"
 version = "0.1.0"
 description = "简包装-应用安装向导打包软件 —— 把 .aiproj 工程编译成 Windows 安装包"
+readme = "README.md"
 requires-python = ">=3.10"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "kllber", email = "1394141383@qq.com" }]
 dependencies = ["Pillow>=10"]
 
 [project.optional-dependencies]

@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://github.com/kllber/jianpack/releases/latest"><img alt="Version" src="https://img.shields.io/badge/version-0.1.0-2ea44f"></a>
-  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
+  <a href="LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue"></a>
   <img alt="Platform: Windows 10 / 11" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D6">
   <img alt="Python 3.10+" src="https://img.shields.io/badge/python-3.10%2B-3776AB">
   <img alt="Engine: NSIS" src="https://img.shields.io/badge/engine-NSIS-orange">
@@ -338,6 +338,7 @@ dist/                      打包结果
 - 作者：**kllber**
 - GitHub：<https://github.com/kllber>
 - 邮箱：1394141383@qq.com
+- 许可：**Apache-2.0**（详见 [LICENSE](LICENSE) 与 [NOTICE](NOTICE)）
 
 本软件是**开源工具**，欢迎使用、分发和反馈问题。开发过程中使用了
 **DeepSeek V4.1 Flash** 进行辅助创作。
