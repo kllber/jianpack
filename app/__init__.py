@@ -1,6 +1,6 @@
 """简包装-应用安装向导打包软件（JianPack）。
 
-把用户配置好的工程（.aiproj）翻译成 NSIS 脚本，再调用 makensis 编译成安装包。
+把用户配置好的工程（.jianpack）翻译成 NSIS 脚本，再调用 makensis 编译成安装包。
 """
 
 __version__ = "0.1.0"

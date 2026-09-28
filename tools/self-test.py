@@ -27,7 +27,7 @@ from app.core import container  # noqa: E402
 from app.core.project import load_project  # noqa: E402
 from app.core.serialize import project_to_dict, save_project  # noqa: E402
 
-DEMO = ROOT / "demo" / "feasibility" / "demo.aiproj"
+DEMO = ROOT / "demo" / "feasibility" / "demo.jianpack"
 
 _failed = 0
 
@@ -101,7 +101,7 @@ def test_plain_roundtrip(work: Path) -> None:
     before = json.loads(source.read_text(encoding="utf-8"))
 
     project = load_project(source)
-    target = work / "roundtrip.aiproj"
+    target = work / "roundtrip.jianpack"
     save_project(project, target)
     after = json.loads(target.read_text(encoding="utf-8"))
 
@@ -192,7 +192,7 @@ def test_tolerate_broken_bool(work: Path) -> None:
     data = json.loads(source.read_text(encoding="utf-8"))
 
     cases = [("1", True), ("0", False), ("true", True), ("false", False), (1, True), (0, False)]
-    path = work / "broken.aiproj"
+    path = work / "broken.jianpack"
     for written, expected in cases:
         data["uninstall"]["deleteUserDataByDefault"] = written
         path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -304,7 +304,7 @@ def test_start_flow(work: Path) -> None:
                 pass     # 走「退出」那条路时主窗口已经自己关掉了
 
     # --- 选「新建工程」：用一个立即返回的假对话框顶替真实对话框
-    project_file = work / "新建的工程.aiproj"
+    project_file = work / "新建的工程.jianpack"
 
     class InstantDialog(tk.Toplevel):
         def __init__(self, master, settings):
@@ -323,7 +323,7 @@ def test_start_flow(work: Path) -> None:
     check("选「新建工程」-> 建出了工程",
           created is not None and Path(created).name == project_file.name,
           f"实际 {created}")
-    check("新建工程只产出一个 .aiproj 文件（单文件容器）",
+    check("新建工程只产出一个 .jianpack 文件（单文件容器）",
           project_file.is_file() and container.sniff(project_file) == "container",
           f"实际 {[p.name for p in work.iterdir()] if work.is_dir() else '(没有)'}")
     check("这个文件能重新完整打开",
@@ -455,7 +455,7 @@ def test_derived_registry_key(work: Path) -> None:
     from app.core.project import GENERIC_REGKEY, Project
 
     def derive(name: str, dir_name: str = "") -> tuple[str, str]:
-        project = Project(source_path=work / "x.aiproj", base_dir=work)
+        project = Project(source_path=work / "x.jianpack", base_dir=work)
         project.app.name = name
         project.app.dir_name = dir_name
         project.app.version = "1.0.0"
@@ -487,13 +487,13 @@ def test_derived_registry_key(work: Path) -> None:
           empty_dir == "" and empty_key == "", f"实际 {(empty_dir, empty_key)!r}")
 
     # 版本号同理
-    project = Project(source_path=work / "y.aiproj", base_dir=work)
+    project = Project(source_path=work / "y.jianpack", base_dir=work)
     project.apply_derived()
     check("版本号为空时不会派生 fileVersion",
           project.app.file_version == "", f"实际 {project.app.file_version!r}")
 
     # 遗留工程（键被冻成 App）应该给出警告
-    legacy = Project(source_path=work / "z.aiproj", base_dir=work)
+    legacy = Project(source_path=work / "z.jianpack", base_dir=work)
     legacy.app.name = "我的软件"
     legacy.app.dir_name = "我的软件"
     legacy.app.version = "1.0.0"
@@ -520,7 +520,7 @@ def test_inline_text_pages(work: Path) -> None:
     legacy["interface"]["license"].pop("text", None)
     legacy["interface"]["changelog"].pop("source", None)
     legacy["interface"]["changelog"].pop("text", None)
-    legacy_path = work / "老工程.aiproj"
+    legacy_path = work / "老工程.jianpack"
     legacy_path.write_text(json.dumps(legacy, ensure_ascii=False, indent=2), encoding="utf-8")
 
     old = load_project(legacy_path)
@@ -544,7 +544,7 @@ def test_inline_text_pages(work: Path) -> None:
           not [p for p in project.validate() if p.level == "error"],
           str([p for p in project.validate() if p.level == "error"]))
 
-    target = work / "内嵌文本.aiproj"
+    target = work / "内嵌文本.jianpack"
     save_project(project, target)
     again = load_project(target)
     check("内嵌文字能正确保存并读回",
@@ -770,13 +770,13 @@ def test_no_maximize(work: Path) -> None:
 
 
 def test_container(work: Path) -> None:
-    """单文件工程：文件夹 -> .aiproj 容器 -> 完整打开；输出位置默认桌面。"""
-    print("\n=== 14. 单文件工程（.aiproj 容器）===")
+    """单文件工程：文件夹 -> .jianpack 容器 -> 完整打开；输出位置默认桌面。"""
+    print("\n=== 14. 单文件工程（.jianpack 容器）===")
     from app.core.paths import desktop_dir
     from app.core.project import Project
 
     source = work / DEMO.name
-    target = work / "打包成单个文件.aiproj"
+    target = work / "打包成单个文件.jianpack"
 
     project = load_project(source)
     original_name = project.app.name
@@ -785,7 +785,7 @@ def test_container(work: Path) -> None:
     work_dir = project.work_dir
     project.cleanup()
 
-    check("工程能打包成单个 .aiproj 文件",
+    check("工程能打包成单个 .jianpack 文件",
           target.is_file() and container.sniff(target) == "container")
     check("打包完临时工作目录被清掉",
           work_dir is None or not Path(work_dir).exists())
@@ -803,22 +803,51 @@ def test_container(work: Path) -> None:
     finally:
         again.cleanup()
 
+    # 旧后缀兼容：早期版本创建的工程仍要能打开；保存时自动改用新后缀
+    legacy_file = work / ("旧版工程" + container.LEGACY_EXTS[0])
+    shutil.copy2(DEMO, legacy_file)
+    try:
+        old = load_project(legacy_file)
+        legacy_ok = old.app.name == original_name
+        old.cleanup()
+    except Exception:  # noqa: BLE001
+        legacy_ok = False
+    check("旧后缀的工程仍能打开（兼容读取）", legacy_ok)
+
+    from app.ui.state import AppState
+
+    state = AppState()
+    state.adopt(load_project(legacy_file))
+    state.touch()
+    migrated = state.save()
+    check("旧后缀工程保存后自动变成 .jianpack",
+          migrated.suffix.lower() == container.PROJECT_EXT and migrated.is_file(),
+          f"实际 {migrated}")
+    check("原来的旧后缀文件保持不动（没被删）", legacy_file.is_file())
+    migrated_project = load_project(migrated)
+    try:
+        check("迁移出来的工程内容完整",
+              migrated_project.app.name == original_name)
+    finally:
+        migrated_project.cleanup()
+    state.close()
+
     # 输出位置：留空 = 桌面；填了就用填的
-    fresh = Project(source_path=work / "x.aiproj", base_dir=work)
+    fresh = Project(source_path=work / "x.jianpack", base_dir=work)
     check("输出位置留空时默认是桌面", fresh.output_dir() == desktop_dir(),
           f"实际 {fresh.output_dir()}")
     fresh.build.output_dir = str(work / "自定义输出")
     check("填了输出位置就用填的",
           fresh.output_dir() == (work / "自定义输出"))
 
-    # 双击 .aiproj（命令行直接拿到文件路径）要当成「打开这个工程」
+    # 双击 .jianpack（命令行直接拿到文件路径）要当成「打开这个工程」
     from app.cli import normalize_argv
 
-    check("双击 .aiproj 会被当成「打开这个工程」",
-          normalize_argv(["C:\\x\\我的软件.aiproj"]) == ["gui", "C:\\x\\我的软件.aiproj"])
+    check("双击 .jianpack 会被当成「打开这个工程」",
+          normalize_argv(["C:\\x\\我的软件.jianpack"]) == ["gui", "C:\\x\\我的软件.jianpack"])
     check("没有参数时打开图形界面", normalize_argv([]) == ["gui"])
     check("正常的子命令不受影响",
-          normalize_argv(["build", "x.aiproj"]) == ["build", "x.aiproj"])
+          normalize_argv(["build", "x.jianpack"]) == ["build", "x.jianpack"])
 
     from app.core import assoc
 
@@ -873,7 +902,7 @@ def test_demo_readonly(work: Path) -> None:
     demo_path = demo.demo_project_path()
     check("演示项目被识别为受保护", demo.is_demo(demo_path), f"实际 {demo_path}")
     check("仓库里的示例不算演示项目",
-          not demo.is_demo(ROOT / "demo" / "feasibility" / "demo.aiproj"))
+          not demo.is_demo(ROOT / "demo" / "feasibility" / "demo.jianpack"))
 
     if demo_path is None or not Path(demo_path).is_file():
         check("演示项目存在", False, "没有可用的演示项目")
@@ -1023,7 +1052,7 @@ def test_startup_ui(work: Path) -> None:
     changed.language = "en"
     changed.show_welcome = False
     changed.auto_open_last = True
-    changed.remember("D:\\某处\\我的软件.aiproj")
+    changed.remember("D:\\某处\\我的软件.jianpack")
     save_settings(changed)
     loaded = load_settings()
     check("新设置项能存下来并读回",
@@ -1115,7 +1144,7 @@ def test_startup_ui(work: Path) -> None:
             check("演示项目不能被「移除记录」移除",
                   start.forget_button.instate(["disabled"]))
             check("选中演示项目能拿到工程路径",
-                  (start._selected_path() or "").endswith(".aiproj"))
+                  (start._selected_path() or "").endswith(".jianpack"))
         start.destroy()
 
         # --- 关于页：有可点击的主页 / 邮箱链接
@@ -1179,7 +1208,7 @@ def test_validate_robustness(work: Path) -> None:
     from app.core.project import FileItem, Project
     from app.ui.new_project_dialog import NewProjectDialog
 
-    project = Project(source_path=work / "missing-src.aiproj", base_dir=work)
+    project = Project(source_path=work / "missing-src.jianpack", base_dir=work)
     project.app.name = "源缺失的工程"
     project.app.version = "1.0.0"
     project.files.items = [FileItem(type="folder", source="并没有这个目录", dest=".")]
@@ -1249,7 +1278,7 @@ def test_folder_payload_paths(work: Path) -> None:
     (src / "r.txt").write_text("r", encoding="utf-8")
     (src / "sub" / "t.txt").write_text("t", encoding="utf-8")
 
-    project = Project(source_path=work / "folder-dest.aiproj", base_dir=work)
+    project = Project(source_path=work / "folder-dest.jianpack", base_dir=work)
     project.app.name = "路径测试"
     project.app.version = "1.0.0"
     project.files.items = [FileItem(type="folder", source="payload-src/a", dest=".")]
@@ -1301,7 +1330,7 @@ def test_folder_payload_paths(work: Path) -> None:
     from app.core.project import load_project
     from app.core.serialize import save_project
 
-    target = work / "keep-roundtrip.aiproj"
+    target = work / "keep-roundtrip.jianpack"
     save_project(project, target)
     reloaded = load_project(target)
     try:
@@ -1331,7 +1360,7 @@ def test_remove_payload_cleanup(work: Path) -> None:
         root = base.resolve()
         return sorted(p.relative_to(root).as_posix() for p in paths)
 
-    project = Project(source_path=base / "p.aiproj", base_dir=base)
+    project = Project(source_path=base / "p.jianpack", base_dir=base)
     project.app.name = "清理测试"
     project.app.version = "1.0.0"
     item_a = FileItem(type="folder", source="payload/a", dest=".")
@@ -1367,7 +1396,7 @@ def test_remove_payload_cleanup(work: Path) -> None:
             path.unlink()
     for item in (item_a, item_c):
         project.files.items.remove(item)
-    target = work / "cleanup-roundtrip.aiproj"
+    target = work / "cleanup-roundtrip.jianpack"
     save_project(project, target, container_mode=True)
     project.cleanup()
 

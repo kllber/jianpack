@@ -26,7 +26,7 @@
 ```powershell
 cd <项目根目录>
 python aipack.py                                              # 新建工程
-python aipack.py gui demo\feasibility\demo.aiproj             # 打开这个示例工程
+python aipack.py gui demo\feasibility\demo.jianpack             # 打开这个示例工程
 ```
 
 界面按 6 步走：基本信息 → 选择要打包的内容 → 安装设置 → 安装界面 → 快捷方式 → 打包。
@@ -35,10 +35,10 @@ python aipack.py gui demo\feasibility\demo.aiproj             # 打开这个示�
 
 ```powershell
 # 只校验工程，不打包
-python -m app validate demo\feasibility\demo.aiproj
+python -m app validate demo\feasibility\demo.jianpack
 
 # 生成 .nsi 脚本 + 编译出安装包
-python -m app build demo\feasibility\demo.aiproj
+python -m app build demo\feasibility\demo.jianpack
 ```
 
 产物：
@@ -143,7 +143,7 @@ powershell -ExecutionPolicy Bypass -File .\tools\capture-screenshots.ps1 -Prefix
 demo/feasibility/
 ├── build.ps1                  构建：生成资源 -> 编译示例程序 -> 编译两个安装包
 ├── verify.ps1                 自动化验证：静默安装 / 卸载 / 检查残留
-├── demo.aiproj                工程文件（见 docs/工程文件格式.md）
+├── demo.jianpack                工程文件（见 docs/工程文件格式.md）
 ├── demo.nsi                   安装脚本（将来由 Python 设计器自动生成）
 ├── assets/                    图标与 MUI 位图（由 src/make_assets.py 生成）
 │   ├── app.ico                程序图标，多尺寸

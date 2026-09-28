@@ -43,8 +43,8 @@
 | 模块 | 能力 |
 |---|---|
 | **6 步向导** | 基本信息 → 打包内容 → 安装设置 → 安装界面 → 快捷方式 → 打包 |
-| **工程文件** | `.aiproj` 单文件容器（本质 zip：`project.json` + `assets/` + `payload/` …）；兼容老的「文件夹工程」，靠文件头自动识别；「另存为」统一产出单文件 |
-| **双击打开** | 打包版启动时自动关联 `.aiproj`（写 HKCU，免管理员）；双击直接进主界面；首选项里可一键修复/取消 |
+| **工程文件** | `.jianpack` 单文件容器（本质 zip：`project.json` + `assets/` + `payload/` …）；兼容老的「文件夹工程」，靠文件头自动识别；「另存为」统一产出单文件 |
+| **双击打开** | 打包版启动时自动关联 `.jianpack`（写 HKCU，免管理员）；双击直接进主界面；首选项里可一键修复/取消 |
 | **打包内容** | 添加文件/文件夹；**文件夹默认保留自己的名字**（可在弹窗里取消→只放内容，带实时预览）；支持 include/exclude 过滤；主程序自动识别；**移除条目时连同工程内 `payload\` 副本一起删**（外部引用不动） |
 | **安装设置** | 默认/自定义安装路径、允许用户改路径、记住上次位置、显示占用空间；用户数据目录、卸载是否询问保留数据 |
 | **安装界面** | 各页面的文案与图片（欢迎 / 许可协议 / 更新日志 / 安装位置 / 安装选项 / 完成页 + 页头图）；协议与日志支持「直接编辑」或「从 txt 导入」；**父项不勾选时子项自动变灰** |
@@ -52,7 +52,7 @@
 | **打包** | 输出位置（默认桌面）、文件名模板、压缩方式、多版本（所有用户 / 当前用户，可同时生成）；**打包进度窗**；实时日志 |
 | **实时预览** | 覆盖 7 种页面，跟随编辑内容与**第 6 步勾选的版本**自动切换；`Ctrl+P` 显隐 |
 | **图片** | 图标、页头图、欢迎图丢任意格式图片 → 弹裁剪窗（拖动/缩放）→ 自动摆正、透明压白底、导出 BMP / 多尺寸 ICO |
-| **加载提示** | 打开工程时显示**加载窗**：双击 `.aiproj`/启动软件用带图标版，软件内开工程用简化无图标版；**读得快就不弹**，慢的时候才显示并给**真实解压进度** |
+| **加载提示** | 打开工程时显示**加载窗**：双击 `.jianpack`/启动软件用带图标版，软件内开工程用简化无图标版；**读得快就不弹**，慢的时候才显示并给**真实解压进度** |
 | **界面** | 中英双语；浅色 / 深色主题；**复选框为自绘 ✓**（不受系统主题影响） |
 | **首选项** | 语言 / 主题 / 启动习惯 / 文件关联修复 / 缓存目录（「用默认位置」+「清空缓存文件…」）/ 恢复默认设置 |
 | **内置教程** | 8 章图文，中英两套（配图由脚本用真实界面生成），独立非模态窗口 |
@@ -68,7 +68,7 @@
 
 ```powershell
 python aipack.py                                     # 打开（先出启动窗口）
-python aipack.py gui demo\feasibility\demo.aiproj    # 直接打开指定工程
+python aipack.py gui demo\feasibility\demo.jianpack    # 直接打开指定工程
 ```
 
 - **启动选择窗口**：新建工程 / 打开已有工程 / 最近打开（第一行固定是自带的
@@ -85,16 +85,16 @@ python aipack.py gui demo\feasibility\demo.aiproj    # 直接打开指定工程
 winget install NSIS.NSIS
 
 # 2) 校验工程
-python -m app validate demo\feasibility\demo.aiproj
+python -m app validate demo\feasibility\demo.jianpack
 
 # 3) 生成脚本并编译
-python -m app build demo\feasibility\demo.aiproj
+python -m app build demo\feasibility\demo.jianpack
 ```
 
 或在别的目录用 `aipack.py`（不依赖当前目录）：
 
 ```powershell
-python "D:\...\应用安装向导打包软件项目\aipack.py" build "D:\...\demo.aiproj"
+python "D:\...\应用安装向导打包软件项目\aipack.py" build "D:\...\demo.jianpack"
 ```
 
 `pip install -e .` 之后可以直接用 `aipack` 命令。
@@ -271,10 +271,10 @@ dist\
 
 ```powershell
 python tools\self-test.py                        # 回归自检：必须 0 失败、stderr 干净
-python -m app validate demo\feasibility\demo.aiproj
-python -m app build    demo\feasibility\demo.aiproj
+python -m app validate demo\feasibility\demo.jianpack
+python -m app build    demo\feasibility\demo.jianpack
 powershell -ExecutionPolicy Bypass -File demo\feasibility\verify.ps1   # 15/15
-python tools\gui-build-test.py demo\feasibility\demo.aiproj            # 界面里真跑一遍打包
+python tools\gui-build-test.py demo\feasibility\demo.jianpack            # 界面里真跑一遍打包
 python tools\build-exe.py                                              # dist\ 里的 exe 不依赖系统 NSIS
 ```
 
@@ -290,10 +290,10 @@ python tools\build-exe.py                                              # dist\ �
 ```
 app/                       设计器核心（Python，标准库 + Pillow）
 ├── core/                  工程层
-│   ├── project.py         .aiproj 数据模型、加载、派生值、校验、文件夹安装路径
+│   ├── project.py         .jianpack 数据模型、加载、派生值、校验、文件夹安装路径
 │   ├── serialize.py       写到磁盘（读在 project.py）
-│   ├── container.py       单文件 .aiproj 的解包/打包/进度/安全校验
-│   ├── assoc.py           .aiproj 文件关联（HKCU，双击打开）
+│   ├── container.py       单文件 .jianpack 的解包/打包/进度/安全校验
+│   ├── assoc.py           .jianpack 文件关联（HKCU，双击打开）
 │   ├── settings.py        本软件设置（最近打开、语言、主题、缓存目录…）
 │   ├── paths.py           路径解析 + 桌面目录
 │   └── errors.py          错误类型
@@ -321,7 +321,7 @@ app/                       设计器核心（Python，标准库 + Pillow）
 ├── cli.py                 命令行入口
 └── __main__.py            python -m app
 
-docs/工程文件格式.md         .aiproj 规范（字段速查、校验规则、NSIS 映射）
+docs/工程文件格式.md         .jianpack 规范（字段速查、校验规则、NSIS 映射）
 tools/                     开发与验收脚本（见上）
 demo/feasibility/          可行性验证 demo（也是生成器的第一个测试用例）
 data/                      软件自己的数据（运行时生成）

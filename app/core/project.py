@@ -1,4 +1,4 @@
-﻿"""工程文件（``.aiproj``）的数据模型、加载与派生值计算。
+﻿"""工程文件（``.jianpack``）的数据模型、加载与派生值计算。
 
 字段清单见 ``docs/工程文件格式.md``。这里的约定是：
 - 读不懂的结构直接报错，绝不静默忽略用户配过的内容；
@@ -878,7 +878,7 @@ class Project:
 def load_project(path: str | Path, progress=None) -> Project:
     """读取并校验工程文件。结构性问题直接抛 :class:`ProjectFileError`。
 
-    支持两种 ``.aiproj``：单文件容器（``PK`` 开头的 zip）和老的 foldered
+    支持两种 ``.jianpack``：单文件容器（``PK`` 开头的 zip）和老的 foldered
     工程（纯 JSON）。容器会先解到一份临时工作目录，之后所有路径都以它为准。
 
     ``progress`` 可选，转交给 :func:`app.core.container.extract`，用于显示解压进度。

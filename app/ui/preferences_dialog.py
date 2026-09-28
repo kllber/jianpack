@@ -185,7 +185,7 @@ class PreferencesDialog(tk.Toplevel):
 
     def _refresh_assoc_status(self) -> None:
         text = {
-            "ok": _("已关联到本程序（双击 .aiproj 即可打开）"),
+            "ok": _("已关联到本程序（双击 .jianpack 即可打开）"),
             "stale": _("关联指向了别的位置，建议点「立即关联 / 修复」"),
             "missing": _("尚未关联，点「立即关联 / 修复」即可"),
         }.get(assoc.status(), "")

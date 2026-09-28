@@ -1,6 +1,6 @@
-"""把 ``.aiproj`` 文件关联到本程序（Windows，写 HKCU，不需要管理员）。
+"""把 ``.jianpack`` 文件关联到本程序（Windows，写 HKCU，不需要管理员）。
 
-关联之后，用户双击一个 ``.aiproj`` 就能打开软件并直接进入工程。
+关联之后，用户双击一个 ``.jianpack`` 就能打开软件并直接进入工程。
 软件是绿色版，没有安装程序，所以提供菜单里的一键关联 / 取消关联。
 """
 
@@ -9,13 +9,15 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+from .container import LEGACY_EXTS, PROJECT_EXT
+
 PROGID = "JianPack.Project"
-EXT = ".aiproj"
+EXT = PROJECT_EXT
 FRIENDLY = "简包装 工程文件"
 
 
 def _app_command() -> str:
-    """双击 .aiproj 时执行的命令行（不含 ``"%1"``）。"""
+    """双击 .jianpack 时执行的命令行（不含 ``"%1"``）。"""
     if getattr(sys, "frozen", False):
         return f'"{Path(sys.executable)}"'
     root = Path(__file__).resolve().parents[2]
@@ -94,6 +96,7 @@ def ensure_registered() -> bool:
 
     返回是否真的写了一次注册表。已经正常就不动，避免每次启动都写。
     """
+    cleanup_legacy()          # 顺手清掉旧扩展名的关联，只保留主扩展名
     if status() == "ok":
         return False
     register()
@@ -119,19 +122,43 @@ def register() -> None:
     _notify_shell()
 
 
+def _remove_ext_key(ext: str) -> bool:
+    """扩展名键指向我们时才删掉；返回是否真的删了。"""
+    import winreg
+
+    classes = r"Software\Classes"
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, classes + "\\" + ext) as key:
+            value, _ = winreg.QueryValueEx(key, "")
+    except OSError:
+        return False
+    if value != PROGID:
+        return False
+    try:
+        winreg.DeleteKey(winreg.HKEY_CURRENT_USER, classes + "\\" + ext)
+        return True
+    except OSError:
+        return False
+
+
+def cleanup_legacy() -> bool:
+    """放弃早期版本对旧扩展名的占用（现在只保留主扩展名）。返回是否改动过。"""
+    changed = False
+    for ext in LEGACY_EXTS:
+        if _remove_ext_key(ext):
+            changed = True
+    if changed:
+        _notify_shell()
+    return changed
+
+
 def unregister() -> None:
     import winreg
 
     classes = r"Software\Classes"
     _delete_tree(winreg.HKEY_CURRENT_USER, classes + "\\" + PROGID)
-    # 只有 .aiproj 指向我们时才清掉这个扩展名键
-    try:
-        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, classes + "\\" + EXT) as key:
-            value, _ = winreg.QueryValueEx(key, "")
-        if value == PROGID:
-            winreg.DeleteKey(winreg.HKEY_CURRENT_USER, classes + "\\" + EXT)
-    except OSError:
-        pass
+    _remove_ext_key(EXT)
+    cleanup_legacy()
     _notify_shell()
 
 

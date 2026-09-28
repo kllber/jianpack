@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""生成随软件分发的演示工程：``assets/demo/演示测试项目.aiproj``。
+"""生成随软件分发的演示工程：``assets/demo/演示测试项目.jianpack``。
 
 启动窗口「最近打开」的第一行固定是这个演示项目，方便新用户参考。
 它由 ``demo/feasibility`` 里的示例改成单文件容器（只带 assets / input / src）。
@@ -21,8 +21,8 @@ sys.path.insert(0, str(ROOT))
 from app.core.project import load_project  # noqa: E402
 from app.core.serialize import save_project  # noqa: E402
 
-SRC = ROOT / "demo" / "feasibility" / "demo.aiproj"
-OUT = ROOT / "assets" / "demo" / "演示测试项目.aiproj"
+SRC = ROOT / "demo" / "feasibility" / "demo.jianpack"
+OUT = ROOT / "assets" / "demo" / "演示测试项目.jianpack"
 DEMO_NAME = "演示测试项目"
 
 
@@ -38,7 +38,7 @@ def main() -> int:
         data = json.loads(SRC.read_text(encoding="utf-8"))
         data["project"]["name"] = DEMO_NAME
         data["build"]["outputDir"] = ""      # 与默认一致：测试打包时输出到桌面
-        project_json = work / "demo.aiproj"
+        project_json = work / "demo.jianpack"
         project_json.write_text(json.dumps(data, ensure_ascii=False, indent=2),
                                 encoding="utf-8")
 

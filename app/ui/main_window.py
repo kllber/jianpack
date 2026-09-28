@@ -40,7 +40,11 @@ STEPS = (BasicPage, FilesPage, InstallPage, InterfacePage, ShortcutsPage, BuildP
 
 
 def project_file_types() -> list[tuple[str, str]]:
-    return [(_("安装打包工程"), "*.aiproj"), (_("所有文件"), "*.*")]
+    from ..core.container import LEGACY_EXTS, PROJECT_EXT
+
+    # 界面文字里只出现主扩展名；旧扩展名只是「能选中打开」，不露脸
+    patterns = " ".join("*" + ext for ext in (PROJECT_EXT, *LEGACY_EXTS))
+    return [(_("安装打包工程"), patterns), (_("所有文件"), "*.*")]
 
 
 SIDEBAR_WIDTH = 200      # 收起预览时左栏的宽度
@@ -807,12 +811,12 @@ class MainWindow(tk.Tk):
             return
         self.flush_all()
         path = filedialog.asksaveasfilename(parent=self, title=_("另存为"),
-                                            defaultextension=".aiproj",
+                                            defaultextension=".jianpack",
                                             filetypes=project_file_types(),
                                             initialfile=self.app.project.source_path.name)
         if not path:
             return
-        # 另存为统一产出「单个 .aiproj」文件：不管原来是文件夹工程还是单文件工程，
+        # 另存为统一产出「单个 .jianpack」文件：不管原来是文件夹工程还是单文件工程，
         # 都能得到一个自包含、可直接发给别人的文件。
         try:
             self.app.save(path, container_mode=True)
@@ -966,7 +970,7 @@ def run(project_path: str | Path | None = None) -> int:
     from ..core import container
 
     container.cleanup_stale()        # 清掉上次异常退出留下的临时工作目录
-    # 打包成 exe 后，自动把 .aiproj 关联到本程序（双击即可打开，无需用户手动设置）。
+    # 打包成 exe 后，自动把 .jianpack 关联到本程序（双击即可打开，无需用户手动设置）。
     # 只在打包版做：源码运行会写成开发脚本路径，没必要。
     # 用 ensure_registered：先检查，只有「没关联 / 关联指到别处」才写，避免每次启动都动注册表。
     if getattr(sys, "frozen", False):
@@ -976,7 +980,7 @@ def run(project_path: str | Path | None = None) -> int:
             pass
 
     path = project_path
-    # 双击 .aiproj / 带工程路径启动：直接进主界面，跳过欢迎页和启动窗口
+    # 双击 .jianpack / 带工程路径启动：直接进主界面，跳过欢迎页和启动窗口
     welcome = project_path is None
     while True:
         window = MainWindow(path, welcome=welcome)

@@ -123,8 +123,8 @@ EN: dict[str, str] = {
     "工程：{path}    （{state}）": "Project: {path}    ({state})",
     "已保存到 {path}": "Saved to {path}",
     "正在保存工程…": "Saving project…",
-    "把 .aiproj 关联到本程序（双击即可打开）":
-        "Associate .aiproj with this app (double-click to open)",
+    "把 .jianpack 关联到本程序（双击即可打开）":
+        "Associate .jianpack with this app (double-click to open)",
     "设置文件关联失败": "Failed to Set File Association",
     "打开失败": "Open Failed",
     "保存失败": "Save Failed",
@@ -161,10 +161,10 @@ EN: dict[str, str] = {
     "切换界面前需要先保存工程，但保存失败了：\n{exc}\n\n设置已经记下了，下次打开软件时生效。":
         "The project must be saved before switching the interface, but saving failed:\n{exc}\n\n"
         "The setting is stored and will take effect next time you open the app.",
-    "把工程文件（.aiproj）编译成 Windows 安装包。\n"
+    "把工程文件（.jianpack）编译成 Windows 安装包。\n"
     "底层使用 NSIS，生成出来的安装包不需要任何运行时依赖。\n\n"
     "Python {python}":
-        "Compiles a project file (.aiproj) into a Windows installer.\n"
+        "Compiles a project file (.jianpack) into a Windows installer.\n"
         "Powered by NSIS; the generated installer needs no runtime dependency.\n\n"
         "Python {python}",
 
@@ -518,9 +518,9 @@ EN: dict[str, str] = {
     "打开已有工程…": "Open Project…",
     "最近打开": "Recent",
     "还没有打开过任何工程。\n\n点上面的「新建工程」从零开始，"
-    "或者用「打开已有工程…」选一个 .aiproj 文件。":
+    "或者用「打开已有工程…」选一个 .jianpack 文件。":
         "No projects yet.\n\nClick \"New Project\" to start from scratch, "
-        "or use \"Open Project…\" to pick a .aiproj file.",
+        "or use \"Open Project…\" to pick a .jianpack file.",
     "工程": "Project",
     "位置": "Location",
     "（找不到）": " (missing)",
@@ -544,8 +544,8 @@ EN: dict[str, str] = {
     "工程名称": "Project name",
     "会用这个名字建一个同名文件夹，工程文件和数据都放在里面。":
         "A folder with this name is created to hold the project file and data.",
-    "会在下面这个位置创建「名称.aiproj」这一个工程文件。":
-        "A single project file \"<name>.aiproj\" is created in the location below.",
+    "会在下面这个位置创建「名称.jianpack」这一个工程文件。":
+        "A single project file \"<name>.jianpack\" is created in the location below.",
     "图标、待打包的文件、界面设置等都会装在这一个文件里，"
     "发送、备份、搬移都只搬它。":
         "The icon, the files to package and all settings are stored inside this single file — "
@@ -553,8 +553,8 @@ EN: dict[str, str] = {
     "存放位置": "Location",
     "将要创建": "Will create",
     "（把上面两项填好）": "(fill in the two fields above)",
-    "里面会有 {name}.aiproj，以及 {detail}。":
-        "It will contain {name}.aiproj and {detail}.",
+    "里面会有 {name}.jianpack，以及 {detail}。":
+        "It will contain {name}.jianpack and {detail}.",
     "请填写工程名称。": "Please enter a project name.",
     "工程名称不合法。": "That project name is not allowed.",
     "工程名称不能包含 \\ / : * ? \" < > | 这些字符。":
@@ -639,8 +639,8 @@ EN: dict[str, str] = {
     "保存设置失败": "Saving Settings Failed",
     "界面语言": "Language",
     "文件关联": "File Association",
-    "已关联到本程序（双击 .aiproj 即可打开）":
-        "Associated with this app (double-click .aiproj to open)",
+    "已关联到本程序（双击 .jianpack 即可打开）":
+        "Associated with this app (double-click .jianpack to open)",
     "关联指向了别的位置，建议点「立即关联 / 修复」":
         "The association points elsewhere — click \"Associate / Repair\"",
     "尚未关联，点「立即关联 / 修复」即可":
@@ -939,9 +939,9 @@ EN: dict[str, str] = {
     "把整个工程文件夹拷走、压缩、发给别人，都还能正常打开和打包。":
         "All relative paths are based on the project file's folder. Copy, zip or send the whole "
         "folder and it still opens and builds.",
-    "工程文件夹：.aiproj 是工程文件，assets 放图标和位图，"
+    "工程文件夹：.jianpack 是工程文件，assets 放图标和位图，"
     "payload 放要打包的文件，build 和 out 是自动生成的中间产物与成品。":
-        "Project folder: the .aiproj is the project file, assets holds icons/bitmaps, payload "
+        "Project folder: the .jianpack is the project file, assets holds icons/bitmaps, payload "
         "holds the files to pack, build and out are generated.",
     "文字里的两种变量": "Two kinds of variables in text",
     "{appName} {appVersion} {appPublisher} 这类占位符，"
@@ -1076,16 +1076,16 @@ EN: dict[str, str] = {
         "The installer is written to the Desktop by default; set a folder in step 6 \"Output "
         "location\" to change it, or clear it to go back to the Desktop.",
 
-    "新建的工程只有一个文件：「我的软件.aiproj」。"
+    "新建的工程只有一个文件：「我的软件.jianpack」。"
     "程序图标、要打包的文件、界面设置等全都装在这一个文件里"
     "（内部是 zip 容器，但平时不用管）。":
-        "A new project is a single file: \"MySoftware.aiproj\". The app icon, the files to package "
+        "A new project is a single file: \"MySoftware.jianpack\". The app icon, the files to package "
         "and all settings live inside it (it is a zip container internally, but you never need "
         "to care).",
     "一个工程 = 一个文件：里面装着工程配置、图标和要打包的文件。":
         "One project = one file: it holds the project settings, icon and the files to package.",
-    "发给别人：只发这一个 .aiproj 文件，对方打开就是完整工程":
-        "Share it: send this one .aiproj file and the other side opens the complete project",
+    "发给别人：只发这一个 .jianpack 文件，对方打开就是完整工程":
+        "Share it: send this one .jianpack file and the other side opens the complete project",
     "备份、搬移、换电脑：只搬这一个文件":
         "Back up, move or switch PC: just move this one file",
     "中间产物（生成的脚本等）放在临时目录里，不进工程文件":
@@ -1098,12 +1098,12 @@ EN: dict[str, str] = {
         "Cache folder: where extracted projects and build intermediates go "
         "(default: data\\work under the app folder); \"Clear Cache Files…\" deletes these temp "
         "folders in one click (the one in use is skipped)",
-    "双击 .aiproj 直接打开": "Double-click a .aiproj to open it",
-    "打包版启动时会把 .aiproj 自动关联到本程序，之后「双击工程文件」"
+    "双击 .jianpack 直接打开": "Double-click a .jianpack to open it",
+    "打包版启动时会把 .jianpack 自动关联到本程序，之后「双击工程文件」"
     "就能打开软件并直接进入主界面（跳过欢迎页和启动窗口）。"
     "万一关联坏了（比如软件换了位置），去「首选项/设置 → 文件关联」"
     "点一下「立即关联 / 修复」即可。":
-        "The packaged app associates .aiproj with itself on startup, so after that, "
+        "The packaged app associates .jianpack with itself on startup, so after that, "
         "\"double-clicking a project file\" opens the app straight to the main window "
         "(skipping the welcome page and the start window). If the association breaks (e.g. the app "
         "was moved), open Preferences/Settings → File Association and click \"Associate / Repair\".",
@@ -1142,7 +1142,7 @@ EN: dict[str, str] = {
         "Help → About shows the author, the GitHub page, the email and the license "
         "(all clickable), plus the open-source note and the disclaimer.",
 
-    "双击 .aiproj 没反应 / 图标不对": "Double-clicking .aiproj does nothing / wrong icon",
+    "双击 .jianpack 没反应 / 图标不对": "Double-clicking .jianpack does nothing / wrong icon",
     "多半是文件关联坏了（比如软件换了位置）。到「首选项/设置 → 文件关联」"
     "点一下「立即关联 / 修复」就好。":
         "The file association is probably broken (e.g. the app was moved). Open "
@@ -1156,7 +1156,7 @@ EN: dict[str, str] = {
 
     # -- 教程示意图 t13 里画的文字 --
     "一个自包含的工程文件夹": "A self-contained project folder",
-    "我的软件.aiproj": "MySoftware.aiproj",
+    "我的软件.jianpack": "MySoftware.jianpack",
     "工程文件（所有路径都以这个目录为基准）":
         "Project file (all paths are relative to this folder)",
     "assets\\": "assets\\",
@@ -1177,11 +1177,11 @@ EN: dict[str, str] = {
     "解开这个工程": "extract this project",
     "保存工程": "save the project",
 
-    "这个工程文件打不开（不是有效的 .aiproj 容器）：{exc}":
-        "Cannot open this project (not a valid .aiproj container): {exc}",
-    "这个 .aiproj 里没有 project.json，可能不是本软件的工程。":
-        "This .aiproj has no project.json — it may not be a project from this app.",
-    "这个 .aiproj 里没有 project.json。": "This .aiproj has no project.json.",
+    "这个工程文件打不开（不是有效的 .jianpack 容器）：{exc}":
+        "Cannot open this project (not a valid .jianpack container): {exc}",
+    "这个 .jianpack 里没有 project.json，可能不是本软件的工程。":
+        "This .jianpack has no project.json — it may not be a project from this app.",
+    "这个 .jianpack 里没有 project.json。": "This .jianpack has no project.json.",
     "读不了这个工程文件：{exc}": "Cannot read this project file: {exc}",
     "保存工程失败：{exc}": "Saving the project failed: {exc}",
     "工程文件里有非法路径，已拒绝：{name}":

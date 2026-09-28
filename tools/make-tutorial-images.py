@@ -32,7 +32,7 @@ from app.engine.assets import TARGETS  # noqa: E402
 from app.ui import preview as preview_mod  # noqa: E402
 from app.ui.main_window import MainWindow  # noqa: E402
 
-DEMO = ROOT / "demo" / "feasibility" / "demo.aiproj"
+DEMO = ROOT / "demo" / "feasibility" / "demo.jianpack"
 OUT = ROOT / "assets" / "tutorial"       # 中文那套；英文写到 OUT/en/，由 main 设定
 LANG = "zh"                              # "zh" | "en"
 DEMO_PROJECT = DEMO                      # 抓图用的工程（英文模式换成英文样例）
@@ -597,7 +597,7 @@ def shot_project() -> None:
             canvas.paste(icon, (68, 100), icon)
         except Exception:  # noqa: BLE001
             pass
-    draw.text((176, 104), L("我的软件.aiproj", "MySoftware.aiproj"),
+    draw.text((176, 104), L("我的软件.jianpack", "MySoftware.jianpack"),
               font=font(23, bold=True), fill=(224, 30, 30))
     draw.text((176, 146), L("双击就能打开本软件", "Double-click to open this app"),
               font=font(14), fill=(90, 96, 106))
@@ -757,7 +757,7 @@ def _english_project() -> Path:
         "Also delete {appName}'s settings and user data?\n\n"
         "Choose No to keep them for a future reinstall.")
 
-    path = work / "demo.aiproj"
+    path = work / "demo.jianpack"
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     return path
 

@@ -17,6 +17,7 @@ from pathlib import Path
 
 from . import APP_NAME, __version__
 from .checks import check_project, split
+from .core.container import PROJECT_EXTS
 from .core.errors import PackError, ProjectFileError
 from .core.project import Project, load_project
 from .engine import assets
@@ -155,7 +156,7 @@ def cmd_gui(args: argparse.Namespace) -> int:
 
 
 def cmd_pack(args: argparse.Namespace) -> int:
-    """把（文件夹形式的）工程打成单个 .aiproj 文件。"""
+    """把（文件夹形式的）工程打成单个 .jianpack 文件。"""
     from .core.serialize import save_project
 
     project = load_project(args.project)
@@ -168,7 +169,7 @@ def cmd_pack(args: argparse.Namespace) -> int:
 
 
 def cmd_unpack(args: argparse.Namespace) -> int:
-    """把单个 .aiproj 文件解成文件夹（方便手工改 / 进版本库）。"""
+    """把单个 .jianpack 文件解成文件夹（方便手工改 / 进版本库）。"""
     import shutil
 
     project = load_project(args.project)
@@ -197,20 +198,20 @@ def cmd_unpack(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="app",
-        description=f"{APP_NAME} v{__version__} —— 把 .aiproj 工程编译成 Windows 安装包",
+        description=f"{APP_NAME} v{__version__} —— 把 .jianpack 工程编译成 Windows 安装包",
     )
     parser.add_argument("--version", action="version", version=f"{APP_NAME} {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
 
     def add_common(p: argparse.ArgumentParser) -> None:
-        p.add_argument("project", help="工程文件路径（.aiproj）")
+        p.add_argument("project", help="工程文件路径（.jianpack）")
         p.add_argument("--mode", default="all", choices=["perMachine", "perUser", "all"],
                        help="要处理的安装模式，默认 all（按工程里 build.modes）")
         p.add_argument("--build-dir", default=DEFAULT_BUILD_DIR,
                        help=f"中间产物目录（相对工程文件），默认 {DEFAULT_BUILD_DIR}")
 
     p_validate = sub.add_parser("validate", help="只校验工程，不打包")
-    p_validate.add_argument("project", help="工程文件路径（.aiproj）")
+    p_validate.add_argument("project", help="工程文件路径（.jianpack）")
     p_validate.set_defaults(func=cmd_validate)
 
     p_generate = sub.add_parser("generate", help="生成 .nsi 脚本，不编译")
@@ -226,13 +227,13 @@ def build_parser() -> argparse.ArgumentParser:
     p_gui.add_argument("project", nargs="?", default=None, help="要打开的工程文件（可省略）")
     p_gui.set_defaults(func=cmd_gui)
 
-    p_pack = sub.add_parser("pack", help="把工程打包成单个 .aiproj 文件")
-    p_pack.add_argument("project", help="工程文件路径（.aiproj）")
-    p_pack.add_argument("output", help="输出的单个 .aiproj 文件路径")
+    p_pack = sub.add_parser("pack", help="把工程打包成单个 .jianpack 文件")
+    p_pack.add_argument("project", help="工程文件路径（.jianpack）")
+    p_pack.add_argument("output", help="输出的单个 .jianpack 文件路径")
     p_pack.set_defaults(func=cmd_pack)
 
-    p_unpack = sub.add_parser("unpack", help="把单个 .aiproj 文件解成文件夹")
-    p_unpack.add_argument("project", help="单个 .aiproj 文件路径")
+    p_unpack = sub.add_parser("unpack", help="把单个 .jianpack 文件解成文件夹")
+    p_unpack.add_argument("project", help="单个 .jianpack 文件路径")
     p_unpack.add_argument("output", help="解包到的文件夹")
     p_unpack.set_defaults(func=cmd_unpack)
 
@@ -264,12 +265,12 @@ def normalize_argv(argv: list[str]) -> list[str]:
     """把命令行整理成规范的子命令形式。
 
     - 不带参数（双击 exe）→ ``gui``；
-    - 只有一个 ``.aiproj`` 路径（双击工程文件）→ ``gui <文件>``，
+    - 只有一个 ``.jianpack`` 路径（双击工程文件）→ ``gui <文件>``，
       这样会直接进主界面，跳过欢迎页和启动选择窗口。
     """
     if not argv:
         return ["gui"]
-    if not argv[0].startswith("-") and argv[0].lower().endswith(".aiproj"):
+    if not argv[0].startswith("-") and argv[0].lower().endswith(PROJECT_EXTS):
         return ["gui", argv[0]]
     return argv
 

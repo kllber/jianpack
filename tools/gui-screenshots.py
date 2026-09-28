@@ -21,7 +21,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageGrab  # noqa: E402
 
 from app.ui.main_window import STEPS, MainWindow  # noqa: E402
 
-DEFAULT_PROJECT = ROOT / "demo" / "feasibility" / "demo.aiproj"
+DEFAULT_PROJECT = ROOT / "demo" / "feasibility" / "demo.jianpack"
 DEFAULT_OUT = ROOT / "demo" / "feasibility" / "screenshots"
 
 LABELS = (

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """不安装也能用的入口。
 
-    python aipack.py build demo\\feasibility\\demo.aiproj
+    python aipack.py build demo\\feasibility\\demo.jianpack
 
 安装之后（``pip install -e .``）则可以直接用 ``aipack`` 命令。
 """

@@ -21,7 +21,10 @@ from .widgets import APP_FONT
 
 
 def file_types() -> list[tuple[str, str]]:
-    return [(_("安装打包工程"), "*.aiproj"), (_("所有文件"), "*.*")]
+    from ..core.container import LEGACY_EXTS, PROJECT_EXT
+
+    patterns = " ".join("*" + ext for ext in (PROJECT_EXT, *LEGACY_EXTS))
+    return [(_("安装打包工程"), patterns), (_("所有文件"), "*.*")]
 
 BOLD = ("Microsoft YaHei UI", 10, "bold")
 
@@ -91,7 +94,7 @@ class StartDialog(tk.Toplevel):
         self.empty_hint = ttk.Label(
             body, foreground=theme.c("hint"), wraplength=540, justify="left",
             text=_("还没有打开过任何工程。\n\n点上面的「新建工程」从零开始，"
-                   "或者用「打开已有工程…」选一个 .aiproj 文件。"))
+                   "或者用「打开已有工程…」选一个 .jianpack 文件。"))
 
         self.holder = ttk.Frame(body)
         self.holder.pack(fill="both", expand=True)

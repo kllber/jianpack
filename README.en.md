@@ -41,8 +41,8 @@ redistribution and commercial use).
 | Area | Capability |
 |---|---|
 | **6-step wizard** | Basic info → Package contents → Install settings → Installer UI → Shortcuts → Build |
-| **Project file** | `.aiproj` single-file container (essentially a zip: `project.json` + `assets/` + `payload/` …); also compatible with the older "folder project", auto-detected by file header; "Save As" always produces a single file |
-| **Double-click to open** | The packaged build auto-associates `.aiproj` (writes HKCU, no admin needed); double-click goes straight to the main window; a one-click repair/remove is in Preferences |
+| **Project file** | `.jianpack` single-file container (essentially a zip: `project.json` + `assets/` + `payload/` …); also compatible with the older "folder project", auto-detected by file header; "Save As" always produces a single file |
+| **Double-click to open** | The packaged build auto-associates `.jianpack` (writes HKCU, no admin needed); double-click goes straight to the main window; a one-click repair/remove is in Preferences |
 | **Package contents** | Add files/folders; **folders keep their own name by default** (can be turned off in the dialog → place contents only, with live preview); include/exclude filters; main program auto-detected; **removing an item also deletes its copy under the project's `payload\`** (external references are left untouched) |
 | **Install settings** | Default/custom install path, allow the user to change it, remember last location, show disk usage; user-data directory; whether to ask about keeping user data on uninstall |
 | **Installer UI** | Text and images per page (Welcome / License / Changelog / Install location / Install options / Finish + header image); License and Changelog support "edit inline" or "import from txt"; **unchecking a parent greys out its children** |
@@ -50,7 +50,7 @@ redistribution and commercial use).
 | **Build** | Output location (Desktop by default), file-name template, compression, multiple variants (all users / current user, can be produced together); **build progress window**; live log |
 | **Live preview** | Covers 7 pages, follows the edited content and the **variant selected in step 6** automatically; toggle with `Ctrl+P` |
 | **Images** | Drop any-format image for icon / header image / welcome image → crop dialog (drag/zoom) → auto-orient, alpha flattened onto white, exported as BMP / multi-size ICO |
-| **Loading feedback** | A **loading window** when opening a project: double-click `.aiproj` / app start uses the icon version, opening from inside the app uses a simplified icon-less version; **it is skipped when reading is fast**, shown otherwise with **real extraction progress** |
+| **Loading feedback** | A **loading window** when opening a project: double-click `.jianpack` / app start uses the icon version, opening from inside the app uses a simplified icon-less version; **it is skipped when reading is fast**, shown otherwise with **real extraction progress** |
 | **UI** | Bilingual Chinese/English; light/dark themes; **checkboxes are custom-drawn ✓** (unaffected by the system theme) |
 | **Preferences** | Language / theme / startup habits / file-association repair / cache directory ("use default location" + "clear cache files…") / restore defaults |
 | **Built-in tutorial** | 8 illustrated chapters, in both Chinese and English (images generated from the real UI by a script), in a separate non-modal window |
@@ -66,7 +66,7 @@ redistribution and commercial use).
 
 ```powershell
 python aipack.py                                     # open (startup window appears first)
-python aipack.py gui demo\feasibility\demo.aiproj    # open a specific project directly
+python aipack.py gui demo\feasibility\demo.jianpack    # open a specific project directly
 ```
 
 - **Startup chooser**: New project / Open existing / Recent (the first row is always the
@@ -84,16 +84,16 @@ python aipack.py gui demo\feasibility\demo.aiproj    # open a specific project d
 winget install NSIS.NSIS
 
 # 2) Validate the project
-python -m app validate demo\feasibility\demo.aiproj
+python -m app validate demo\feasibility\demo.jianpack
 
 # 3) Generate the script and compile
-python -m app build demo\feasibility\demo.aiproj
+python -m app build demo\feasibility\demo.jianpack
 ```
 
 Or use `aipack.py` from any directory (no dependency on the current directory):
 
 ```powershell
-python "D:\...\应用安装向导打包软件项目\aipack.py" build "D:\...\demo.aiproj"
+python "D:\...\应用安装向导打包软件项目\aipack.py" build "D:\...\demo.jianpack"
 ```
 
 After `pip install -e .` you can use the `aipack` command directly.
@@ -295,10 +295,10 @@ with a prompt.
 
 ```powershell
 python tools\self-test.py                        # regression self-test: must be 0 failures, clean stderr
-python -m app validate demo\feasibility\demo.aiproj
-python -m app build    demo\feasibility\demo.aiproj
+python -m app validate demo\feasibility\demo.jianpack
+python -m app build    demo\feasibility\demo.jianpack
 powershell -ExecutionPolicy Bypass -File demo\feasibility\verify.ps1   # 15/15
-python tools\gui-build-test.py demo\feasibility\demo.aiproj            # actually run a build in the GUI
+python tools\gui-build-test.py demo\feasibility\demo.jianpack            # actually run a build in the GUI
 python tools\build-exe.py                                              # exes under dist\ don't depend on system NSIS
 ```
 
@@ -316,10 +316,10 @@ loading/progress windows, parent→child greying, cache buttons, etc. (groups 1�
 ```
 app/                       Designer core (Python, stdlib + Pillow)
 ├── core/                  Project layer
-│   ├── project.py         .aiproj data model, loading, derived values, validation, folder install paths
+│   ├── project.py         .jianpack data model, loading, derived values, validation, folder install paths
 │   ├── serialize.py       Write to disk (reading lives in project.py)
-│   ├── container.py       Single-file .aiproj pack/unpack/progress/safety checks
-│   ├── assoc.py           .aiproj file association (HKCU, double-click to open)
+│   ├── container.py       Single-file .jianpack pack/unpack/progress/safety checks
+│   ├── assoc.py           .jianpack file association (HKCU, double-click to open)
 │   ├── settings.py        App settings (recent files, language, theme, cache dir…)
 │   ├── paths.py           Path resolution + Desktop directory
 │   └── errors.py          Error types
@@ -347,7 +347,7 @@ app/                       Designer core (Python, stdlib + Pillow)
 ├── cli.py                 Command-line entry
 └── __main__.py            python -m app
 
-docs/工程文件格式.md        .aiproj spec (field quick reference, validation rules, NSIS mapping)
+docs/工程文件格式.md        .jianpack spec (field quick reference, validation rules, NSIS mapping)
 tools/                     Dev & acceptance scripts (see above)
 demo/feasibility/          Feasibility demo (also the generator's first test case)
 data/                      The software's own data (created at runtime)

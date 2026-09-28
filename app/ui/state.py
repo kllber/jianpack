@@ -56,7 +56,7 @@ class AppState:
     # -- 生命周期 -----------------------------------------------------------
 
     def new_project(self, path: str | Path) -> Project:
-        """新建一个**单文件**工程：磁盘上只留一个 ``.aiproj``，内容都在临时工作目录里。"""
+        """新建一个**单文件**工程：磁盘上只留一个 ``.jianpack``，内容都在临时工作目录里。"""
         target = Path(path).expanduser().resolve()
         self._discard_work()
         work = container.make_work_dir()
@@ -91,6 +91,12 @@ class AppState:
             raise ProjectFileError(_("还没有打开任何工程"))
         if path is None and not self.dirty:
             return self.project.source_path      # 没改过就不重复打包
+        if path is None:
+            # 早期版本的旧后缀工程：保存时自动改用新后缀；
+            # 磁盘上原来那个旧文件保持不动（不删用户的东西）。
+            source = self.project.source_path
+            if source.suffix.lower() in container.LEGACY_EXTS:
+                path = source.with_suffix(container.PROJECT_EXT)
         target = save_project(self.project, path, container_mode)
         self.dirty = False
         self.notify()

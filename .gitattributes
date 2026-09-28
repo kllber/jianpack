@@ -2,7 +2,7 @@
 * text=auto
 
 # 明确按二进制处理（不要做换行符转换）
-*.aiproj binary
+*.jianpack binary
 *.ico    binary
 *.exe    binary
 *.bmp    binary

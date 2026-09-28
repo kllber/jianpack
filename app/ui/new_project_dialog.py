@@ -1,6 +1,6 @@
 ﻿"""新建工程对话框。
 
-用户选好名称和位置后，只产出一个 ``.aiproj`` 文件 ——
+用户选好名称和位置后，只产出一个 ``.jianpack`` 文件 ——
 工程内容（图标、待打包文件、界面设置……）全都装在这一个文件里，
 发送、备份、搬移都只搬这一个文件。
 """
@@ -66,7 +66,7 @@ class NewProjectDialog(tk.Toplevel):
         self.name_entry = ttk.Entry(body, textvariable=self.name_var, width=48)
         self.name_entry.pack(fill="x", pady=(4, 3))
         ttk.Label(body, foreground=theme.c("hint"), font=APP_FONT,
-                  text=_("会在下面这个位置创建「名称.aiproj」这一个工程文件。")
+                  text=_("会在下面这个位置创建「名称.jianpack」这一个工程文件。")
                   ).pack(anchor="w")
 
         ttk.Label(body, text=_("存放位置"), font=BOLD).pack(anchor="w", pady=(16, 0))
@@ -129,7 +129,7 @@ class NewProjectDialog(tk.Toplevel):
             self.preview_note.configure(text=problem)
             return
 
-        project_file = Path(parent).expanduser() / f"{name}.aiproj"
+        project_file = Path(parent).expanduser() / f"{name}.jianpack"
         self.preview_path.configure(text=str(project_file), foreground=theme.c("accent"))
         self.preview_note.configure(
             text=_("图标、待打包的文件、界面设置等都会装在这一个文件里，"
@@ -168,7 +168,7 @@ class NewProjectDialog(tk.Toplevel):
             return
 
         parent_path = Path(parent).expanduser()
-        project_file = parent_path / f"{name}.aiproj"
+        project_file = parent_path / f"{name}.jianpack"
 
         if project_file.exists():
             messagebox.showerror(
@@ -178,7 +178,7 @@ class NewProjectDialog(tk.Toplevel):
                 parent=self)
             return
 
-        # 真正的写盘交给 MainWindow.new_project -> AppState.save（打成 .aiproj 容器）
+        # 真正的写盘交给 MainWindow.new_project -> AppState.save（打成 .jianpack 容器）
         self.result = (str(project_file), str(parent_path))
         self.destroy()
 

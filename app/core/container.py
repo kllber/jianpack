@@ -1,4 +1,4 @@
-"""单个 ``.aiproj`` 工程文件（ZIP 容器）的读写。
+"""单个 ``.jianpack`` 工程文件（ZIP 容器）的读写。
 
 设计成「容器只是搬运层」：运行时永远把工程解到一份真实目录（临时工作目录），
 生成器、NSIS、预览、图片处理全都照旧在磁盘上干活；保存时再把这份目录压回去。
@@ -21,6 +21,14 @@ from ..i18n import t as _
 from .errors import ProjectFileError
 
 PROJECT_JSON = "project.json"
+
+# 工程文件扩展名。
+# 下面 LEGACY_EXTS 里的旧扩展名是整个程序**唯一**保留的一处，
+# 仅用于兼容读取早期版本创建的工程（其它地方一律不出现）。
+PROJECT_EXT = ".jianpack"
+LEGACY_EXTS = (".aiproj",)
+PROJECT_EXTS = (PROJECT_EXT,) + LEGACY_EXTS
+
 WORK_PREFIX = "简包装-工程-"
 # 顶层里不装进容器的目录（中间产物）
 EXCLUDE_TOP = {"build"}
@@ -29,7 +37,7 @@ STORE_THRESHOLD = 64 * 1024
 
 
 def sniff(path: str | Path) -> str:
-    """判断一个 ``.aiproj`` 是哪一种：``container`` / ``json`` / ``missing``。"""
+    """判断一个 ``.jianpack`` 是哪一种：``container`` / ``json`` / ``missing``。"""
     path = Path(path)
     if not path.is_file():
         return "missing"
@@ -156,12 +164,12 @@ def extract(container: str | Path, dest: str | Path, progress=None) -> Path:
         archive = zipfile.ZipFile(container)
     except (OSError, zipfile.BadZipFile) as exc:
         raise ProjectFileError(
-            _("这个工程文件打不开（不是有效的 .aiproj 容器）：{exc}").format(exc=exc)) from exc
+            _("这个工程文件打不开（不是有效的 .jianpack 容器）：{exc}").format(exc=exc)) from exc
 
     with archive:
         names = archive.namelist()
         if PROJECT_JSON not in names:
-            raise ProjectFileError(_("这个 .aiproj 里没有 project.json，可能不是本软件的工程。"))
+            raise ProjectFileError(_("这个 .jianpack 里没有 project.json，可能不是本软件的工程。"))
         files = [info for info in archive.infolist()
                  if info.filename and not info.is_dir()
                  and not info.filename.endswith(("/", "\\"))]
@@ -194,13 +202,13 @@ def read_project_bytes(container: str | Path) -> bytes:
         with zipfile.ZipFile(container) as archive:
             return archive.read(PROJECT_JSON)
     except KeyError as exc:
-        raise ProjectFileError(_("这个 .aiproj 里没有 project.json。")) from exc
+        raise ProjectFileError(_("这个 .jianpack 里没有 project.json。")) from exc
     except (OSError, zipfile.BadZipFile) as exc:
         raise ProjectFileError(_("读不了这个工程文件：{exc}").format(exc=exc)) from exc
 
 
 def pack(src_dir: str | Path, dest: str | Path) -> Path:
-    """把工作目录压成一个 ``.aiproj``（先写临时文件再原子替换）。"""
+    """把工作目录压成一个 ``.jianpack``（先写临时文件再原子替换）。"""
     src = Path(src_dir)
     dest = Path(dest)
     if not (src / PROJECT_JSON).is_file():

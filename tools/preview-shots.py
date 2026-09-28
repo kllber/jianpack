@@ -21,7 +21,7 @@ from app.core.project import load_project  # noqa: E402
 from app.ui import preview  # noqa: E402
 
 SHOTS = ROOT / "demo" / "feasibility" / "screenshots"
-PROJECT = ROOT / "demo" / "feasibility" / "demo.aiproj"
+PROJECT = ROOT / "demo" / "feasibility" / "demo.jianpack"
 
 # 预览页 -> 真实截图
 PAIRS = [

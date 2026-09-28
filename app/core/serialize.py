@@ -1,4 +1,4 @@
-"""把内存里的工程写回 ``.aiproj``。
+"""把内存里的工程写回 ``.jianpack``。
 
 读的方向在 :mod:`app.core.project`，这里只负责写。
 字段名保持和读的时候完全一致（camelCase），保证「读进来再写出去」是无损的。
@@ -21,7 +21,7 @@ PROJECT_SUBFOLDERS = ("assets", "payload", "build")
 def scaffold_project_folder(project_file: str | Path) -> Path:
     """建好工程需要的子目录，返回工程文件夹。
 
-    工程必须是**一个自包含的文件夹**：``<名称>.aiproj`` 加这几个子目录。
+    工程必须是**一个自包含的文件夹**：``<名称>.jianpack`` 加这几个子目录。
     否则图标、待打包文件、中间产物、安装包会散落在用户选的位置上。
     """
     folder = Path(project_file).expanduser().parent
@@ -173,7 +173,7 @@ def save_project(project: Project, path: str | Path | None = None,
                  container_mode: bool | None = None) -> Path:
     """把工程写到 ``path``（默认写回原路径）。
 
-    - ``container_mode=True``：压成单个 ``.aiproj``（zip 容器）；
+    - ``container_mode=True``：压成单个 ``.jianpack``（zip 容器）；
     - ``False``：写成老的纯 JSON（文件夹工程）；
     - ``None``：沿用工程当前模式。
 
