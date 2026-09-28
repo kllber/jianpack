@@ -22,12 +22,8 @@ from .errors import ProjectFileError
 
 PROJECT_JSON = "project.json"
 
-# 工程文件扩展名。
-# 下面 LEGACY_EXTS 里的旧扩展名是整个程序**唯一**保留的一处，
-# 仅用于兼容读取早期版本创建的工程（其它地方一律不出现）。
+# 工程文件扩展名（唯一）。
 PROJECT_EXT = ".jianpack"
-LEGACY_EXTS = (".aiproj",)
-PROJECT_EXTS = (PROJECT_EXT,) + LEGACY_EXTS
 
 WORK_PREFIX = "简包装-工程-"
 # 顶层里不装进容器的目录（中间产物）

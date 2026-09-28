@@ -21,10 +21,9 @@ from .widgets import APP_FONT
 
 
 def file_types() -> list[tuple[str, str]]:
-    from ..core.container import LEGACY_EXTS, PROJECT_EXT
+    from ..core.container import PROJECT_EXT
 
-    patterns = " ".join("*" + ext for ext in (PROJECT_EXT, *LEGACY_EXTS))
-    return [(_("安装打包工程"), patterns), (_("所有文件"), "*.*")]
+    return [(_("安装打包工程"), "*" + PROJECT_EXT), (_("所有文件"), "*.*")]
 
 BOLD = ("Microsoft YaHei UI", 10, "bold")
 

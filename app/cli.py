@@ -17,7 +17,7 @@ from pathlib import Path
 
 from . import APP_NAME, __version__
 from .checks import check_project, split
-from .core.container import PROJECT_EXTS
+from .core.container import PROJECT_EXT
 from .core.errors import PackError, ProjectFileError
 from .core.project import Project, load_project
 from .engine import assets
@@ -270,7 +270,7 @@ def normalize_argv(argv: list[str]) -> list[str]:
     """
     if not argv:
         return ["gui"]
-    if not argv[0].startswith("-") and argv[0].lower().endswith(PROJECT_EXTS):
+    if not argv[0].startswith("-") and argv[0].lower().endswith(PROJECT_EXT):
         return ["gui", argv[0]]
     return argv
 

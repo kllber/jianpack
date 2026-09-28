@@ -91,12 +91,6 @@ class AppState:
             raise ProjectFileError(_("还没有打开任何工程"))
         if path is None and not self.dirty:
             return self.project.source_path      # 没改过就不重复打包
-        if path is None:
-            # 早期版本的旧后缀工程：保存时自动改用新后缀；
-            # 磁盘上原来那个旧文件保持不动（不删用户的东西）。
-            source = self.project.source_path
-            if source.suffix.lower() in container.LEGACY_EXTS:
-                path = source.with_suffix(container.PROJECT_EXT)
         target = save_project(self.project, path, container_mode)
         self.dirty = False
         self.notify()

@@ -803,35 +803,6 @@ def test_container(work: Path) -> None:
     finally:
         again.cleanup()
 
-    # 旧后缀兼容：早期版本创建的工程仍要能打开；保存时自动改用新后缀
-    legacy_file = work / ("旧版工程" + container.LEGACY_EXTS[0])
-    shutil.copy2(DEMO, legacy_file)
-    try:
-        old = load_project(legacy_file)
-        legacy_ok = old.app.name == original_name
-        old.cleanup()
-    except Exception:  # noqa: BLE001
-        legacy_ok = False
-    check("旧后缀的工程仍能打开（兼容读取）", legacy_ok)
-
-    from app.ui.state import AppState
-
-    state = AppState()
-    state.adopt(load_project(legacy_file))
-    state.touch()
-    migrated = state.save()
-    check("旧后缀工程保存后自动变成 .jianpack",
-          migrated.suffix.lower() == container.PROJECT_EXT and migrated.is_file(),
-          f"实际 {migrated}")
-    check("原来的旧后缀文件保持不动（没被删）", legacy_file.is_file())
-    migrated_project = load_project(migrated)
-    try:
-        check("迁移出来的工程内容完整",
-              migrated_project.app.name == original_name)
-    finally:
-        migrated_project.cleanup()
-    state.close()
-
     # 输出位置：留空 = 桌面；填了就用填的
     fresh = Project(source_path=work / "x.jianpack", base_dir=work)
     check("输出位置留空时默认是桌面", fresh.output_dir() == desktop_dir(),

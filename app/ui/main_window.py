@@ -40,11 +40,9 @@ STEPS = (BasicPage, FilesPage, InstallPage, InterfacePage, ShortcutsPage, BuildP
 
 
 def project_file_types() -> list[tuple[str, str]]:
-    from ..core.container import LEGACY_EXTS, PROJECT_EXT
+    from ..core.container import PROJECT_EXT
 
-    # 界面文字里只出现主扩展名；旧扩展名只是「能选中打开」，不露脸
-    patterns = " ".join("*" + ext for ext in (PROJECT_EXT, *LEGACY_EXTS))
-    return [(_("安装打包工程"), patterns), (_("所有文件"), "*.*")]
+    return [(_("安装打包工程"), "*" + PROJECT_EXT), (_("所有文件"), "*.*")]
 
 
 SIDEBAR_WIDTH = 200      # 收起预览时左栏的宽度
