@@ -6,6 +6,11 @@
 
 底层用 NSIS 作为打包引擎（zlib 类许可，允许随软件分发和商用）。
 
+> **English:** *JianPack — a visual Windows installer / setup builder and an
+> Inno Setup Compiler alternative, powered by NSIS. It builds small, dependency-free
+> installers (no .NET / Python runtime needed on the target machine), through a
+> bilingual Chinese / English GUI.*
+
 ![设计器界面](demo/feasibility/screenshots/总览-设计器界面.png)
 
 > **给后续维护者 / 其他 AI 窗口：** 动手前请先读文末的
