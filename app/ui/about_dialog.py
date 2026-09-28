@@ -20,6 +20,7 @@ LINK_FONT = ("Microsoft YaHei UI", 9, "underline")
 
 GITHUB_URL = "https://github.com/kllber"
 EMAIL = "1394141383@qq.com"
+LICENSE_URL = "https://github.com/kllber/jianpack/blob/main/LICENSE"
 
 
 def _open_url(url: str) -> None:
@@ -84,6 +85,7 @@ class AboutDialog(tk.Toplevel):
         self._row(body, _("作者："), "kllber")
         self._link_row(body, "GitHub：", GITHUB_URL, GITHUB_URL)
         self._link_row(body, _("邮箱："), EMAIL, "mailto:" + EMAIL)
+        self._link_row(body, _("许可："), "Apache-2.0", LICENSE_URL)
 
         note = tk.Frame(body, background=theme.c("note_bg"),
                         highlightbackground=theme.c("note_border"), highlightthickness=1)

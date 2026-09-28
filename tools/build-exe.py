@@ -43,6 +43,9 @@ GUI_EXE = "简包装.exe"
 
 IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc")
 
+# 随分发包一起给出的许可与声明（Apache-2.0 要求「许可随副本分发」）
+LEGAL_FILES = ("LICENSE", "NOTICE", "THIRD-PARTY-NOTICES.md")
+
 
 def _force_remove(function, path, _excinfo) -> None:
     """删除失败时的兜底：去掉只读属性再试一次。"""
@@ -196,6 +199,14 @@ def deliver(source_exe: Path, final_name: str) -> Path:
     return exe
 
 
+def copy_legal_files(folder: Path) -> None:
+    """把 LICENSE / NOTICE / THIRD-PARTY-NOTICES.md 放进分发包根目录。"""
+    for name in LEGAL_FILES:
+        source = ROOT / name
+        if source.is_file():
+            shutil.copy2(source, folder / name)
+
+
 def folder_size(path: Path) -> float:
     return sum(f.stat().st_size for f in path.rglob("*") if f.is_file()) / 1024 / 1024
 
@@ -225,10 +236,14 @@ def main() -> int:
     produced: list[Path] = []
     if what in ("all", "gui"):
         raw = build("aipack-gui", windowed=True, stage=stage, version=version)
-        produced.append(deliver(raw, "简包装"))
+        exe = deliver(raw, "简包装")
+        copy_legal_files(exe.parent)
+        produced.append(exe)
     if what in ("all", "cli"):
         raw = build("aipack", windowed=False, stage=stage, version=version)
-        produced.append(deliver(raw, "aipack"))
+        exe = deliver(raw, "aipack")
+        copy_legal_files(exe.parent)
+        produced.append(exe)
 
     print()
     print("打包完成（dist 目录里每个子文件夹都是一个可直接运行的完整程序）：")

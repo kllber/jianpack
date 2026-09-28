@@ -99,6 +99,7 @@ EN: dict[str, str] = {
         "installs with a double-click. Powered by NSIS; the installer has no runtime dependency.",
     "作者：": "Author: ",
     "邮箱：": "Email: ",
+    "许可：": "License: ",
     "本软件是开源工具，欢迎使用、分发和反馈问题。":
         "This software is an open-source tool — feel free to use it, share it and report issues.",
     "免责声明：本软件按「现状」提供，不附带任何明示或暗示的担保。"
@@ -1136,10 +1137,10 @@ EN: dict[str, str] = {
         "\"pack\" turns an old folder project into a single file; \"unpack\" extracts a single "
         "file back into a folder (handy for manual edits or version control).",
     "关于与开源": "About & open source",
-    "「帮助 → 关于」里有作者信息、GitHub 主页和联系邮箱（都可以直接点开），"
+    "「帮助 → 关于」里有作者信息、GitHub 主页、联系邮箱和许可信息（都可以直接点开），"
     "以及开源说明和免责声明。":
-        "Help → About shows the author, the GitHub page and the contact email (all clickable), "
-        "plus the open-source note and the disclaimer.",
+        "Help → About shows the author, the GitHub page, the email and the license "
+        "(all clickable), plus the open-source note and the disclaimer.",
 
     "双击 .aiproj 没反应 / 图标不对": "Double-clicking .aiproj does nothing / wrong icon",
     "多半是文件关联坏了（比如软件换了位置）。到「首选项/设置 → 文件关联」"
