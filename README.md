@@ -1,6 +1,25 @@
-<p align="right">
+<p align="center">
+  <img src="docs/images/banner.png" alt="简包装 JianPack — 可视化 Windows 安装包制作工具 / Visual Windows Installer Builder" width="100%">
+</p>
+
+<p align="center">
+  <a href="https://github.com/kllber/jianpack/releases/latest"><img alt="Version" src="https://img.shields.io/badge/version-0.1.0-2ea44f"></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
+  <img alt="Platform: Windows 10 / 11" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D6">
+  <img alt="Python 3.10+" src="https://img.shields.io/badge/python-3.10%2B-3776AB">
+  <img alt="Engine: NSIS" src="https://img.shields.io/badge/engine-NSIS-orange">
+  <a href="https://github.com/kllber/jianpack/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/kllber/jianpack/total?color=2ea44f"></a>
+</p>
+
+<p align="center">
   <a href="README.md"><kbd><b>简体中文</b></kbd></a>&nbsp;&nbsp;<a href="README.en.md"><kbd>English</kbd></a>
 </p>
+
+<p align="center">
+  <a href="https://github.com/kllber/jianpack/releases/latest"><img alt="下载 简包装 v0.1.0" src="https://img.shields.io/badge/Download-JianPack%20v0.1.0-2ea44f?style=for-the-badge&logo=github&logoColor=white"></a>
+</p>
+
+---
 
 # 简包装-应用安装向导打包软件
 
