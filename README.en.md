@@ -23,7 +23,7 @@
 
 # JianPack — Application Installer / Setup Builder
 
-A visual installer-builder for Windows, aimed at Chinese users — it takes the most
+A visual installer-builder for Windows, aimed at beginners — it takes the most
 commonly used parts of *Inno Setup Compiler* and makes them simple. The **GUI is
 bilingual (Chinese / English)**, and the **installers it produces are
 dependency-free**: the end user just double-clicks to install — no .NET, Python or
@@ -33,11 +33,6 @@ Under the hood it uses **NSIS** as the packaging engine (zlib-style license, all
 redistribution and commercial use).
 
 ![Designer UI](demo/feasibility/screenshots/总览-设计器界面.png)
-
-> **For future maintainers / other AI sessions:** before touching anything, please
-> read [**Maintenance conventions**](#8-maintenance-conventions-important) at the end.
-> It lists the project's hard-and-fast habits — "what not to do by default", "what to
-> do after a change", and the "code word" — so you don't do harm.
 
 ---
 
@@ -316,59 +311,7 @@ loading/progress windows, parent→child greying, cache buttons, etc. (groups 1�
 
 ---
 
-## 8. Maintenance conventions (important)
-
-> This section is the owner's **hard-and-fast habits**. Follow it strictly so you don't
-> do harm.
-
-1. **By default, do not put anything on the Desktop.**
-   Normally only change code and run checks inside the project. **Only when the user says
-   the four Chinese characters「分发操作」** do you perform a distribution: rebuild `dist\`
-   and overwrite `C:\Users\Administrator\Desktop\简包装` (create it if missing), and delete
-   the `data\` inside it.
-   > The copy on the Desktop is the "complete portable version to hand to others":
-   > `简包装.exe` + `_internal` (bundled NSIS, tutorial images, demo project) +
-   > `aipack\` (CLI version) + `使用说明.txt`.
-
-2. **Do not delete any feature, do not change the layout.** Only add and fix; keep the UI
-   structure, sizes and positions as they are.
-
-3. **Chinese and English text must stay in sync.** Any new/changed UI text must be added
-   as an English entry in `app/i18n.py` (the Chinese original wrapped in `_()` is the
-   key). For sentences with `{placeholders}`, the placeholders must match between the
-   Chinese and English.
-
-4. **After changes you must run `python tools\self-test.py`**, requiring **0 failures and
-   clean stderr**; when the UI layout/styles/images are involved, regenerate the tutorial
-   images with `tools\make-tutorial-images.py` (Chinese first, then `--lang en`) so the
-   tutorial matches the real UI.
-
-5. **Clean up test residue.** After running, delete the repo's `data\`, the root
-   `__pycache__\`, and any temporary test projects/installers, keeping the workspace clean.
-
-6. **Go by user experience, reduce confusion.** Don't give one setting two entry points;
-   make "invisible state" visible (loading has feedback, progress is shown, disabled
-   options are greyed out). Discuss before acting when possible.
-
-7. **Project fields are backward compatible.** When reading an old project with missing
-   fields, fill them with defaults; when a structure can't be understood, error out rather
-   than silently ignoring it. Derived fields (directory name, registry key, fileVersion)
-   must **not** be derived early when the input is empty.
-
-8. **Keep the style consistent.** Comments and error messages are in Chinese; bilingual
-   entries live in `i18n.py`; dialogs follow the existing style (blue title bar + body +
-   bottom buttons).
-
-9. **Version number**: currently `v0.1.0` (`app/__init__.py`). When bumping, remember to
-   sync `pyproject.toml`, `docs`, and the Desktop distribution notes.
-
-10. **Do not touch the user's real files.** Images are read-only (originals are never
-    written); removing an item only deletes "the copy inside the project"; clearing the
-    cache only deletes directories named by this software — never anything else.
-
----
-
-## 9. Directory structure
+## 8. Directory structure
 
 ```
 app/                       Designer core (Python, stdlib + Pillow)
@@ -416,7 +359,7 @@ dist/                      Build output
 
 ---
 
-## 10. Author / open source
+## 9. Author / open source
 
 - Author: **kllber**
 - GitHub: <https://github.com/kllber>
