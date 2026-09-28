@@ -1,0 +1,23 @@
+# ---- 构建产物 ----
+/dist/
+/build/
+demo/feasibility/build/
+demo/feasibility/out/
+
+# ---- 软件运行时数据 ----
+/data/
+
+# ---- Python 缓存 ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# ---- 编辑器 / 系统 ----
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+*.log
+
+# ---- 私有资料（不属于本项目，不入库）----
+程序不要读取和动此文件夹内部的内容/

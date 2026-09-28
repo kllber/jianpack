@@ -1,0 +1,13 @@
+# 统一按内容自动判断文本/二进制，避免跨平台换行符差异
+* text=auto
+
+# 明确按二进制处理（不要做换行符转换）
+*.aiproj binary
+*.ico    binary
+*.exe    binary
+*.bmp    binary
+*.png    binary
+
+# Windows 脚本保持 CRLF
+*.ps1 text eol=crlf
+*.bat text eol=crlf

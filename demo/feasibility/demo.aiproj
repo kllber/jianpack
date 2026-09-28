@@ -1,0 +1,137 @@
+{
+  "formatVersion": 1,
+
+  "generator": {
+    "name": "应用安装向导打包软件",
+    "version": "0.1.0"
+  },
+
+  "project": {
+    "name": "我的小工具",
+    "createdAt": "2026-09-27T10:00:00+08:00",
+    "modifiedAt": "2026-09-27T10:00:00+08:00"
+  },
+
+  "app": {
+    "name": "我的小工具",
+    "dirName": "MyApp",
+    "version": "1.0.0",
+    "fileVersion": "1.0.0.0",
+    "publisher": "示例软件工作室",
+    "copyright": "Copyright (C) 2026 示例软件工作室",
+    "homepage": "https://example.com/myapp",
+    "description": "应用安装向导打包软件 —— 可行性验证示例程序",
+    "registryKey": "MyApp",
+    "icon": "assets/app.ico",
+    "mainExe": "MyApp.exe",
+    "mainExeArgs": ""
+  },
+
+  "files": {
+    "items": [
+      { "type": "folder", "source": "input", "dest": ".", "keepFolder": false,
+        "include": [], "exclude": [] }
+    ]
+  },
+
+  "install": {
+    "mode": "perMachine",
+    "defaultDir": null,
+    "allowChangeDir": true,
+    "rememberLastDir": true,
+    "estimatedSizeAuto": true
+  },
+
+  "interface": {
+    "language": "zh-CN",
+    "brandingText": "{appName} 安装程序 v{appVersion}",
+    "showAbortWarning": true,
+    "showDetails": true,
+    "headerImage": "assets/header.bmp",
+
+    "welcome": {
+      "enabled": true,
+      "title": "欢迎使用 {appName} 安装向导",
+      "text": "安装向导将引导您完成 {appName} 的安装。\n\n建议在继续之前关闭其他正在运行的程序。安装完成后，您可以从桌面或开始菜单启动本软件。\n\n模式：{installMode}\n\n点击「下一步」继续。",
+      "image": "assets/welcome.bmp"
+    },
+
+    "license": {
+      "enabled": true,
+      "source": "file",
+      "text": "",
+      "file": "src/许可协议.txt",
+      "requireAccept": true,
+      "acceptText": "我接受许可协议中的条款(&A)",
+      "textTop": "请在使用本软件之前阅读下面的许可协议。",
+      "textBottom": "勾选「我接受」后点击「下一步」继续安装。"
+    },
+
+    "changelog": {
+      "enabled": true,
+      "source": "file",
+      "text": "",
+      "file": "src/更新日志.txt",
+      "title": "更新日志",
+      "subtitle": "了解这个版本带来了哪些变化"
+    },
+
+    "directoryPage": {
+      "textTop": "安装向导将把 {appName} 安装到下面的文件夹中。\n\n若要安装到其他位置，请点击「浏览」并选择目标文件夹。",
+      "textDestination": "安装到："
+    },
+
+    "optionsPage": {
+      "enabled": true,
+      "title": "安装选项",
+      "subtitle": "选择安装时要创建的快捷方式",
+      "groupText": "附加任务",
+      "intro": "安装向导可以为 {appName} 创建下面的快捷方式，方便您随时启动。",
+      "hint": "提示：无论是否创建快捷方式，都可以在「控制面板 - 程序和功能」中卸载本软件。"
+    },
+
+    "finish": {
+      "title": "{appName} 安装完成",
+      "text": "{appName} 已经安装到您的电脑上。\n\n安装位置：$INSTDIR\n\n点击「完成」关闭安装向导。",
+      "runApp": true,
+      "runText": "立即运行 {appName}",
+      "link": {
+        "enabled": true,
+        "text": "访问软件主页",
+        "url": "{appHomepage}"
+      }
+    }
+  },
+
+  "shortcuts": {
+    "desktop": {
+      "enabled": true,
+      "default": true,
+      "userCanToggle": true,
+      "name": "{appName}"
+    },
+    "startMenu": {
+      "enabled": true,
+      "default": true,
+      "userCanToggle": true,
+      "name": "{appName}",
+      "useFolder": true,
+      "uninstallShortcut": true
+    }
+  },
+
+  "uninstall": {
+    "userDataPath": "$APPDATA\\{appName}",
+    "askKeepUserData": true,
+    "keepUserDataText": "是否同时删除 {appName} 的配置和用户数据？\n\n选择「否」将保留这些数据，以便日后重新安装时继续使用。",
+    "deleteUserDataByDefault": false,
+    "autoClose": true
+  },
+
+  "build": {
+    "outputDir": "out",
+    "fileName": "{appName}-{appVersion}-Setup.exe",
+    "compression": "solid-lzma",
+    "modes": ["perMachine", "perUser"]
+  }
+}
