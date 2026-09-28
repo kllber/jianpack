@@ -1,6 +1,7 @@
 # ---- 构建产物 ----
 /dist/
 /build/
+分发版本/
 demo/feasibility/build/
 demo/feasibility/out/
 
@@ -22,3 +23,4 @@ desktop.ini
 # ---- 私有资料（不属于本项目，不入库）----
 程序不要读取和动此文件夹内部的内容/
 维护约定.md
+tools/make-dist.py
