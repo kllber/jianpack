@@ -1,4 +1,4 @@
-﻿"""第 4 步：安装界面定制。"""
+﻿"""第 4 步：安装界面定制（含快捷方式设置）。"""
 
 from __future__ import annotations
 
@@ -207,7 +207,7 @@ class InterfacePage(StepPage):
     def _options_tab(self, notebook, interface) -> None:
         page = self._tab(notebook, "安装选项页")
         on = self.check(page, "显示安装选项页", interface.options_page, "enabled",
-                        hint="只有第 5 步里至少启用了快捷方式时才会显示")
+                        hint="只有「桌面 / 开始菜单快捷方式」至少启用了一个时才会显示")
         body = ttk.Frame(page)
         body.pack(fill="x")
         self.text(body, "标题", interface.options_page, "title", label_width=11)
@@ -216,6 +216,47 @@ class InterfacePage(StepPage):
         self.text(body, "说明", interface.options_page, "intro", height=3, label_width=11)
         self.text(body, "底部提示", interface.options_page, "hint", height=3, label_width=11)
         self.gate(body, lambda: bool(on.get()), [on])
+        # 快捷方式设置（原来单独一步，现在并到这里）
+        self._shortcuts_block(page)
+
+    def _shortcuts_block(self, parent) -> None:
+        """桌面 / 开始菜单快捷方式（原来独立的「第 5 步」，现并入本页）。"""
+        shortcuts = self.app.project.shortcuts
+
+        def group(title: str) -> ttk.LabelFrame:
+            # 注意：这里不能用 self.section()——那个会把分组框排到**页面级**的
+            # 自动两列区里（忽略传入的父容器），放进标签页会跑到标签条外面去。
+            box = ttk.LabelFrame(parent, text=" " + _(title) + " ",
+                                 padding=(12, 8, 12, 10))
+            box.pack(fill="x", pady=(6, 10))
+            return box
+
+        hint_label(parent,
+                   "「允许用户修改」如果关掉，安装选项页上对应的复选框会变成灰色不可点，"
+                   "一律按「默认勾选」执行。")
+
+        desktop = group("桌面快捷方式")
+        desk_on = self.check(desktop, "启用桌面快捷方式", shortcuts.desktop, "enabled")
+        desk_body = ttk.Frame(desktop)
+        desk_body.pack(fill="x")
+        self.check(desk_body, "默认勾选", shortcuts.desktop, "default")
+        self.check(desk_body, "允许用户在安装时修改", shortcuts.desktop, "user_can_toggle")
+        self.text(desk_body, "快捷方式名称", shortcuts.desktop, "name",
+                  hint="不带 .lnk 后缀")
+        self.gate(desk_body, lambda: bool(desk_on.get()), [desk_on])
+
+        start_menu = group("开始菜单快捷方式")
+        menu_on = self.check(start_menu, "启用开始菜单快捷方式", shortcuts.start_menu, "enabled")
+        menu_body = ttk.Frame(start_menu)
+        menu_body.pack(fill="x")
+        self.check(menu_body, "默认勾选", shortcuts.start_menu, "default")
+        self.check(menu_body, "允许用户在安装时修改", shortcuts.start_menu, "user_can_toggle")
+        self.text(menu_body, "快捷方式名称", shortcuts.start_menu, "name")
+        self.check(menu_body, "放在同名子文件夹里", shortcuts.start_menu, "use_folder",
+                   hint="开始菜单里会多一层文件夹，例如「开始菜单\\我的小工具\\我的小工具」")
+        self.check(menu_body, "同时放一个「卸载」快捷方式",
+                   shortcuts.start_menu, "uninstall_shortcut")
+        self.gate(menu_body, lambda: bool(menu_on.get()), [menu_on])
 
     def _finish(self, notebook, interface) -> None:
         page = self._tab(notebook, "完成页")

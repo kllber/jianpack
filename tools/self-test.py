@@ -173,7 +173,7 @@ def test_gui_roundtrip(work: Path) -> None:
 
     print("     各页内容请求尺寸 (编号, 宽, 高):", layout)
     too_big = [f"{number}: {w}×{h}" for number, w, h in layout
-               if w > 1250 or h > 1100]
+               if w > 1250 or h > 1400]
     check("没有页面被控件撑爆", not too_big, "；".join(too_big))
 
     after = json.loads(source.read_text(encoding="utf-8"))
@@ -601,17 +601,28 @@ def test_preview(work: Path) -> None:
     # --- 渲染所有页面
     pages = preview.available_pages(project)
     check("页面清单和配置一致",
-          pages[:3] == ["welcome", "license", "changelog"] and pages[-1] == "finish",
+          pages[0] == "appinfo"
+          and pages[1:4] == ["welcome", "license", "changelog"]
+          and pages[-1] == "finish",
           f"实际 {pages}")
     bad = []
     for key in pages + ["instfiles"]:
+        if key == "appinfo":
+            continue          # 「程序属性」是另一种窗口，尺寸不同，下面单独测
         try:
             image = preview.render(project, key)
             if image.size != (503, 362):
                 bad.append(f"{key}: {image.size}")
         except Exception as exc:  # noqa: BLE001
             bad.append(f"{key}: {exc!r}")
-    check("每一页都能渲染成 503×362", not bad, "；".join(bad))
+    check("每一页安装页面都能渲染成 503×362", not bad, "；".join(bad))
+
+    try:
+        info = preview.render(project, "appinfo")
+        check("「程序属性」预览能渲染",
+              info.size[0] > 300 and info.size[1] > 300, f"实际 {info.size}")
+    except Exception as exc:  # noqa: BLE001
+        check("「程序属性」预览能渲染", False, repr(exc))
 
     # --- 关掉某一页，清单要跟着变
     project.interface.changelog.enabled = False
@@ -625,10 +636,10 @@ def test_preview(work: Path) -> None:
     after = preview.render(project, "welcome").tobytes()
     check("改了欢迎页标题，画面跟着变", before != after)
 
-    # 预览的安装路径要跟随「第 6 步勾选的版本」，而不是那个不再出现在界面上的 install.mode
+    # 预览的安装路径要跟随「第 5 步勾选的版本」，而不是那个不再出现在界面上的 install.mode
     project.install.mode = "perMachine"
     project.build.modes = ["perUser"]
-    check("预览安装路径跟随第 6 步勾选的版本",
+    check("预览安装路径跟随第 5 步勾选的版本",
           "AppData\\Local" in preview._sample_dir(project), preview._sample_dir(project))
     project.build.modes = ["perMachine"]
     check("换一个版本预览路径也跟着变",
@@ -653,13 +664,13 @@ def test_preview(work: Path) -> None:
               content_w >= 950, f"编辑区约 {content_w}px（窗口 {total_w}px）")
 
         check("步骤列表是两列（名称 + 说明）",
-              len(window.step_list.get_children()) == 6
+              len(window.step_list.get_children()) == 5
               and window.step_list.item("0", "values")[1] != "",
               f"实际 {window.step_list.item('0', 'values')!r}")
 
         inner = window._pages[3].body.inner
         check("安装界面页没有被撑爆",
-              inner.winfo_reqwidth() <= 1250 and inner.winfo_reqheight() <= 1100,
+              inner.winfo_reqwidth() <= 1250 and inner.winfo_reqheight() <= 1400,
               f"{inner.winfo_reqwidth()}×{inner.winfo_reqheight()}")
 
         # --- 真正走一遍「改控件 -> 刷新预览」这条链路
@@ -1438,7 +1449,7 @@ def test_progress_windows(work: Path) -> None:
         check("小工程打开不弹加载窗（不闪一下）", shown == [], str(shown))
         check("加载完成后加载窗已清理", window._splash is None)
 
-        page = window._pages[-1]              # 第 6 步：打包
+        page = window._pages[-1]              # 第 5 步：打包
         page._open_progress(2)
         check("能创建打包进度窗", page._progress_window is not None)
         check("打包进度条是来回滚动的（不会看起来卡住）",
@@ -1491,7 +1502,7 @@ def test_gate_options(work: Path) -> None:
         cb.invoke(); window.update()
         check("勾回来后子项恢复", not off(find(inter, "直接在下面编辑")))
 
-        sc = window._pages[4]                        # 快捷方式
+        sc = inter                                  # 快捷方式已并入第 4 步
         desk = find(sc, "启用桌面快捷方式")
         desk.invoke(); window.update()
         check("取消桌面快捷方式后子项变灰", off(find(sc, "默认勾选")))

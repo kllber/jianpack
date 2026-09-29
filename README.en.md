@@ -40,15 +40,14 @@ redistribution and commercial use).
 
 | Area | Capability |
 |---|---|
-| **6-step wizard** | Basic info → Package contents → Install settings → Installer UI → Shortcuts → Build |
+| **5-step wizard** | Basic info → Package contents → Install settings → Installer UI (shortcuts included) → Build |
 | **Project file** | `.jianpack` single-file container (essentially a zip: `project.json` + `assets/` + `payload/` …); also compatible with the older "folder project", auto-detected by file header; "Save As" always produces a single file |
 | **Double-click to open** | The packaged build auto-associates `.jianpack` (writes HKCU, no admin needed); double-click goes straight to the main window; a one-click repair/remove is in Preferences |
 | **Package contents** | Add files/folders; **folders keep their own name by default** (can be turned off in the dialog → place contents only, with live preview); include/exclude filters; main program auto-detected; **removing an item also deletes its copy under the project's `payload\`** (external references are left untouched) |
 | **Install settings** | Default/custom install path, allow the user to change it, remember last location, show disk usage; user-data directory; whether to ask about keeping user data on uninstall |
-| **Installer UI** | Text and images per page (Welcome / License / Changelog / Install location / Install options / Finish + header image); License and Changelog support "edit inline" or "import from txt"; **unchecking a parent greys out its children** |
-| **Shortcuts** | Desktop, Start Menu; enable / checked by default / user can toggle / name / same-named subfolder / uninstall shortcut |
+| **Installer UI** | Text and images per page (Welcome / License / Changelog / Install location / Install options / Finish + header image); License and Changelog support "edit inline" or "import from txt"; **the Install options page also holds the desktop / Start Menu shortcut settings**; **unchecking a parent greys out its children** |
 | **Build** | Output location (Desktop by default), file-name template, compression, multiple variants (all users / current user, can be produced together); **build progress window**; live log |
-| **Live preview** | Covers 7 pages, follows the edited content and the **variant selected in step 6** automatically; toggle with `Ctrl+P` |
+| **Live preview** | Covers the 7 installer pages plus an **App Properties** preview, follows the edited content and the **variant selected in step 5** automatically; toggle with `Ctrl+P` |
 | **Images** | Drop any-format image for icon / header image / welcome image → crop dialog (drag/zoom) → auto-orient, alpha flattened onto white, exported as BMP / multi-size ICO |
 | **Loading feedback** | A **loading window** when opening a project: double-click `.jianpack` / app start uses the icon version, opening from inside the app uses a simplified icon-less version; **it is skipped when reading is fast**, shown otherwise with **real extraction progress** |
 | **UI** | Bilingual Chinese/English; light/dark themes; **checkboxes are custom-drawn ✓** (unaffected by the system theme) |
@@ -73,7 +72,7 @@ python aipack.py gui demo\feasibility\demo.jianpack    # open a specific project
   bundled "demo project", shown in blue and not removable) / Quit.
 - On first launch a **welcome page** appears (one-line intro + "Open tutorial", a
   "don't show again" checkbox, and a Chinese/English switch at the bottom-left).
-- Then follow the 6 steps. Click "Start build" on the last page.
+- Then follow the 5 steps. Click "Start build" on the last page.
 
 ![Startup window](demo/feasibility/screenshots/启动窗口-有记录.png)
 
@@ -130,21 +129,20 @@ double-clicks the exe inside.** No Python, NSIS or any runtime needed on their s
 
 ## 3. UI & workflow highlights
 
-### The 6-step wizard
+### The 5-step wizard
 
 | Step | What you can do |
 |---|---|
 | 1. Basic info | App name, install directory name, version, file version, internal identifier, company/author, copyright, homepage, description, program icon |
 | 2. Package contents | Add files/folders, adjust the post-install location (**a folder can keep its name or place contents only**), specify the main program, remove items |
 | 3. Install settings | Default / custom install path, allow the user to change it, remember last location, show disk usage, user-data directory, ask about keeping user data on uninstall |
-| 4. Installer UI | Text and images for each page; License/Changelog edited inline or imported from txt; header image |
-| 5. Shortcuts | Desktop / Start Menu: enable, checked by default, user can toggle, name, same-named subfolder, uninstall shortcut |
-| 6. Build | Output location, file-name template, compression, **which variants to produce**, start build, live log |
+| 4. Installer UI | Text and images for each page; License/Changelog edited inline or imported from txt; header image; **the Install options page sets the desktop / Start Menu shortcuts** |
+| 5. Build | Output location, file-name template, compression, **which variants to produce**, start build, live log |
 
-**Two things that are chosen "only in step 6" (important)**:
+**Two things that are chosen "only in step 5" (important)**:
 - **Install for "all users / current user only"**: step 3 **no longer** has a radio
-  button; it's a multi-select in step 6, and **both can be produced at once**. The live
-  preview draws according to the first variant checked in step 6, matching the result.
+  button; it's a multi-select in step 5, and **both can be produced at once**. The live
+  preview draws according to the first variant checked in step 5, matching the result.
 - When multiple variants are checked, the file name automatically gets a
   `-PerMachine` / `-PerUser` suffix so they don't overwrite each other.
 
@@ -221,7 +219,7 @@ Install options → Progress → Finish.
 
 ![All installer pages](demo/feasibility/screenshots/总览-安装向导全部页面.png)
 
-Two install modes (both can be produced at once in step 6):
+Two install modes (both can be produced at once in step 5):
 
 | | For all users | Current user only |
 |---|---|---|
@@ -238,7 +236,7 @@ Two install modes (both can be produced at once in step 6):
   `$INSTDIR` `$APPDATA` … are replaced by NSIS at install time.
 
 **Output location**: by default it outputs to the **Desktop** (following OneDrive-style
-redirection); step 6 "Output location" can change it to any directory (relative paths are
+redirection); step 5 "Output location" can change it to any directory (relative paths are
 resolved against the project file's directory), leave it empty to go back to the Desktop.
 
 ---
@@ -276,8 +274,8 @@ with a prompt.
 - Checkboxes changed to **custom-drawn ✓** (some themes used to draw them as ✗).
 
 **Behavior changes**
-- "Install mode" **moved from step 3 to a multi-select in step 6**; the preview follows
-  step 6, eliminating the "preview doesn't match the result" issue.
+- "Install mode" **moved from step 3 to a multi-select in step 5**; the preview follows
+  step 5, eliminating the "preview doesn't match the result" issue.
 - Removing an item now **cleans up the project's `payload\` copy**, so no orphan files
   are left and the "overwrite?" prompt no longer keeps appearing.
 - **The full tutorial image set (Chinese and English) was regenerated** and the text was
@@ -342,7 +340,7 @@ app/                       Designer core (Python, stdlib + Pillow)
 │   ├── theme.py           Light/dark theme (incl. custom-drawn ✓ checkboxes)
 │   ├── i18n.py            Chinese/English text table
 │   ├── resources.py / state.py / widgets.py
-│   └── pages/             The 6 step pages (base.py holds the generic "grey out children" mechanism)
+│   └── pages/             The 5 step pages (base.py holds the generic "grey out children" mechanism)
 ├── checks.py              Unified validation entry (shared by CLI and GUI)
 ├── cli.py                 Command-line entry
 └── __main__.py            python -m app

@@ -182,6 +182,7 @@ def _text_height(draw, text, width, font, spacing=3) -> int:
 # ---------------------------------------------------------------------------
 
 PAGE_TITLES = {
+    "appinfo": "程序属性",
     "welcome": "欢迎页",
     "license": "许可协议",
     "changelog": "更新日志",
@@ -195,7 +196,7 @@ PAGE_TITLES = {
 def available_pages(project: Project) -> list[str]:
     """按当前配置列出安装包里**实际会出现**的页面。"""
     interface = project.interface
-    pages: list[str] = []
+    pages: list[str] = ["appinfo"]
     if interface.welcome.enabled:
         pages.append("welcome")
     if interface.license.enabled and _has_content(project, interface.license):
@@ -233,7 +234,7 @@ class PreviewContext:
 def _preview_mode(project: Project) -> str:
     """预览按哪个模式画。
 
-    跟随第 6 步「要生成哪些版本」里勾选的第一个——这样预览和最终生成的安装包
+    跟随第 5 步「要生成哪些版本」里勾选的第一个——这样预览和最终生成的安装包
     永远一致；没勾选任何版本时才退回工程里的默认值。
     """
     for mode in project.build.modes:
@@ -268,7 +269,12 @@ def _context(project: Project) -> PreviewContext:
 
 
 def render(project: Project, page_key: str, window_title: str = "") -> Image.Image:
-    """渲染指定页面，返回 503×362 的整窗图。"""
+    """渲染指定页面。
+
+    安装向导各页返回 503×362 的整窗图；「程序属性」是另一种窗口，单独画。
+    """
+    if page_key == "appinfo":
+        return _render_appinfo(project)
     canvas = Image.new("RGB", (WINDOW_W, WINDOW_H), COL_CLIENT)
     draw = ImageDraw.Draw(canvas)
     ctx = _context(project)
@@ -604,6 +610,136 @@ def _paint_finish(canvas, draw, ctx: PreviewContext) -> None:
             ctx.expand(project.interface.branding_text), primary=_("完成"))
 
 
+# ---------------------------------------------------------------------------
+# 「程序属性」预览（第 1 步用）
+# ---------------------------------------------------------------------------
+
+APPINFO_W, APPINFO_H = 503, 440
+
+
+def _render_appinfo(project: Project) -> Image.Image:
+    """按 Windows「属性 → 详细信息」的样子画一张仿真图。
+
+    反映第 1 步填的：程序说明 / 文件版本 / 产品名称 / 产品版本 / 版权，
+    以及最终安装包的文件名。
+    """
+    from datetime import datetime
+
+    from ..engine.nsi import output_file_name
+
+    app = project.app
+    mode = _preview_mode(project)
+    total = len(project.build.modes) or 1
+    try:
+        filename = output_file_name(project, mode, total)
+    except Exception:  # noqa: BLE001
+        filename = f"{app.name}-{app.version}-Setup.exe"
+
+    now = datetime.now().strftime("%Y/%m/%d %H:%M")
+    rows = [
+        (_("文件说明"), app.description or _("（留空）")),
+        (_("类型"), _("应用程序")),
+        (_("文件版本"), app.file_version),
+        (_("产品名称"), app.name),
+        (_("产品版本"), app.version),
+        (_("版权"), app.copyright or _("（留空）")),
+        (_("大小"), "123 KB"),
+        (_("修改日期"), now),
+        (_("语言"), _("简体中文(中国大陆), 英语(美国)")),
+        (_("原始文件名"), filename),
+    ]
+
+    W, H = APPINFO_W, APPINFO_H
+    image = Image.new("RGB", (W, H), (240, 240, 240))
+    draw = ImageDraw.Draw(image)
+
+    # 标题栏
+    draw.rectangle([0, 0, W - 1, 30], fill=(244, 244, 244))
+    draw.line([0, 30, W, 30], fill=(202, 202, 202))
+    icon = _asset(project, app.icon, (16, 16))
+    tx = 10
+    if icon is not None:
+        image.paste(icon, (10, 8), icon)
+        tx = 32
+    draw.text((tx, 9), _("{name} 属性").format(name=filename),
+              font=_font(12), fill=(28, 28, 28))
+    draw.text((W - 44, 8), "?", font=_font(13), fill=(70, 70, 70))
+    draw.text((W - 24, 8), "\u2715", font=_font(11), fill=(70, 70, 70))
+
+    # 标签条
+    tabs = [("常规", False), ("兼容性", False), ("数字签名", False),
+            ("安全", False), ("详细信息", True), ("以前的版本", False)]
+    x = 6
+    active = None
+    for label, is_active in tabs:
+        tw = int(draw.textlength(label, font=_font(12))) + 26
+        if is_active:
+            active = (x, tw, label)
+        else:
+            draw.text((x + 13, 38), label, font=_font(12), fill=(80, 80, 80))
+            draw.line([x + tw, 34, x + tw, 57], fill=(214, 214, 214))
+        x += tw + 2
+    draw.line([0, 57, W, 57], fill=(202, 202, 202))
+    if active is not None:
+        ax, atw, alabel = active
+        draw.rectangle([ax, 32, ax + atw, 58], fill=(255, 255, 255))
+        draw.text((ax + 13, 38), alabel, font=_font(12), fill=(20, 20, 20))
+
+    # 内容白底
+    draw.rectangle([0, 58, W - 1, H - 56], fill=(255, 255, 255))
+
+    # 列表
+    x0, x1 = 12, W - 12
+    sep = x0 + 148
+    row_h = 24
+    y = 70
+    top = y
+    draw.rectangle([x0, y, x1, y + row_h], fill=(250, 250, 250))
+    draw.text((x0 + 8, y + 6), _("属性"), font=_font(11), fill=(50, 50, 50))
+    draw.text((sep + 8, y + 6), _("值"), font=_font(11), fill=(50, 50, 50))
+    y += row_h
+    draw.text((x0 + 8, y + 6), _("说明"), font=_font(11, bold=True), fill=(30, 30, 30))
+    y += row_h
+    for label, value in rows:
+        draw.text((x0 + 8, y + 6), label, font=_font(11), fill=(60, 60, 60))
+        draw.text((sep + 8, y + 6), _clip(draw, str(value), _font(11), x1 - sep - 14),
+                  font=_font(11), fill=(20, 20, 20))
+        y += row_h
+    draw.rectangle([x0, top, x1, y], outline=(200, 200, 200))
+    draw.line([x0, top + row_h, x1, top + row_h], fill=(200, 200, 200))
+    draw.line([sep, top, sep, y], fill=(200, 200, 200))
+
+    # 底部
+    draw.line([0, H - 56, W, H - 56], fill=(210, 210, 210))
+    draw.text((16, H - 38), _("删除属性和个人信息"), font=_font(11), fill=(0, 90, 190))
+    bx = W - 16 - 3 * 78 - 2 * 10
+    _prop_button(draw, bx, H - 44, _("确定"), primary=True)
+    _prop_button(draw, bx + 88, H - 44, _("取消"))
+    _prop_button(draw, bx + 176, H - 44, _("应用(A)"), disabled=True)
+    return image
+
+
+def _clip(draw, text: str, font, max_width: int) -> str:
+    """太长就截断加省略号（预览用，别溢出行）。"""
+    if draw.textlength(text, font=font) <= max_width:
+        return text
+    out = text
+    while out and draw.textlength(out + "…", font=font) > max_width:
+        out = out[:-1]
+    return out + "…"
+
+
+def _prop_button(draw, x: int, y: int, label: str, primary: bool = False,
+                 disabled: bool = False) -> None:
+    w, h = 78, 26
+    draw.rectangle([x, y, x + w, y + h], fill=(252, 252, 252), outline=(150, 150, 150))
+    if primary:
+        draw.rectangle([x + 1, y + 1, x + w - 1, y + h - 1], outline=(0, 120, 215))
+    color = (170, 170, 170) if disabled else (20, 20, 20)
+    width = int(draw.textlength(label, font=_font(11)))
+    draw.text((x + (w - width) // 2, y + 6), label, font=_font(11), fill=color)
+
+
 def _page_body(project: Project, page) -> str:
     """取页面正文：内嵌文字直接用，文件来源就现场读（读不到给个提示）。"""
     if getattr(page, "source", "text") == "file":
@@ -680,11 +816,12 @@ class PreviewPanel(ttk.Frame):
         返回是否真的换了页；**不在这里刷新**，由调用方统一刷（免得画两遍）。
         """
         key = None
-        if step == 3:
+        if step == 0:
+            # 第 1 步：显示「程序属性」预览，方便看到这些信息最终长什么样
+            key = "appinfo"
+        elif step == 3:
             key = SUBTAB_TO_PAGE.get(subtab)
         elif step == 4:
-            key = "options"
-        elif step == 5:
             key = "finish"
         if key and key != self._page:
             self._page = key

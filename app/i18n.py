@@ -311,12 +311,12 @@ EN: dict[str, str] = {
     "安装路径、用户数据与卸载": "Install location, user data and uninstall",
     "决定装到哪里、要不要管理员权限、卸载时怎么处理用户数据":
         "Where it installs, whether admin rights are needed, and how user data is handled",
-    "决定默认装到哪、卸载时怎么处理用户数据（装给谁在第 6 步选）":
+    "决定默认装到哪、卸载时怎么处理用户数据（装给谁在第 5 步选）":
         "Where it installs by default and how user data is handled on uninstall "
-        "(who it installs for is chosen in step 6)",
-    "装给「所有用户」还是「仅当前用户」在第 6 步「打包」里选，"
+        "(who it installs for is chosen in step 5)",
+    "装给「所有用户」还是「仅当前用户」在第 5 步「打包」里选，"
     "两种版本也能同时生成。这一页只管安装路径、用户数据和卸载。":
-        "\"For all users\" or \"current user only\" is chosen in step 6 (Build); you can build "
+        "\"For all users\" or \"current user only\" is chosen in step 5 (Build); you can build "
         "both. This page only handles the install location, user data and uninstall.",
     "安装模式": "Install Mode",
     "模式": "Mode",
@@ -324,8 +324,8 @@ EN: dict[str, str] = {
         "Install for all users (Program Files; UAC admin prompt on install)",
     "仅当前用户安装（装到 %LOCALAPPDATA%\\Programs，免提权，双击就装）":
         "Install for the current user only (%LOCALAPPDATA%\\Programs; no admin, just double-click)",
-    "两种模式可以同时生成，在第 6 步「打包」里勾选。":
-        "You can build both; choose them in step 6 (Build).",
+    "两种模式可以同时生成，在第 5 步「打包」里勾选。":
+        "You can build both; choose them in step 5 (Build).",
     "安装位置": "Install Location",
     "使用默认路径（按安装模式自动选择）": "Use the default path (chosen by install mode)",
     "自定义路径": "Custom path",
@@ -413,10 +413,10 @@ EN: dict[str, str] = {
     "上方说明": "Text above",
     "输入框标签": "Field label",
     "显示安装选项页": "Show the options page",
-    "只有第 5 步里至少启用了快捷方式时才会显示":
-        "Only shown when at least one shortcut is enabled in step 5",
+    "只有「桌面 / 开始菜单快捷方式」至少启用了一个时才会显示":
+        "Only shown when at least one shortcut (desktop / Start Menu) is enabled",
     "分组框标题": "Group box title",
-    "说明": "Intro",
+    "说明": "Description",
     "底部提示": "Hint at the bottom",
     "提供「立即运行」复选框": "Offer a \"Run now\" checkbox",
     "复选框文字": "Checkbox text",
@@ -435,7 +435,39 @@ EN: dict[str, str] = {
     "协议": "the license",
     "日志": "the changelog",
 
-    # -- 第 5 步：快捷方式 --
+    # -- 教程补充词条 --
+    "这个软件把「一个文件夹里做好的程序」做成一个安装包——把它发给别人，对方双击就能装，不用解压、不用自己在一堆文件中找 exe。": "This app turns a ready-made program in a folder into one installer — send it to someone and they just double-click to install; no unzipping, no hunting for the exe.",
+    "打开软件会先出现「启动窗口」，让你决定要做什么。": "A Start window appears first, letting you decide what to do.",
+    "「安装选项页」里还能配置安装时创建哪些快捷方式——桌面 / 开始菜单快捷方式，以及用户能不能在安装时自己勾选。": "The Install options page also configures which shortcuts get created during setup — desktop / Start menu shortcuts, and whether the user can toggle them.",
+    "「安装选项页」（在第 4 步里）：① 启用桌面快捷方式；②「允许用户在安装时修改」关掉后，安装时对应的复选框会变灰；③ 开始菜单快捷方式同理。": "The Install options page (inside step 4): ① enable the desktop shortcut; ② turning off \"let the user change it\" greys out the matching checkbox during setup; ③ the Start menu shortcut works the same.",
+    "默认输出到**桌面**；在第 5 步「输出位置」里填一个目录就按那个目录走，留空又恢复成桌面。": "By default the installer goes to the **Desktop**; fill in a folder under \"Output location\" in step 5 to use that folder, or leave it empty to go back to the Desktop.",
+    "菜单最右边的「首选项/设置」（快捷键 Ctrl+,）里可以调这些使用习惯：": "The \"Preferences\" item at the far right of the menu (Ctrl+,) lets you tune these habits:",
+    "界面主题：浅色 / 深色": "Theme: light / dark",
+    "文件关联：关联坏了可以点「立即关联 / 修复」，也可以取消关联": "File association: if it breaks, click \"Associate / repair\", or remove the association",
+    "发给别人：打包成 exe": "Sharing: build the designer as an exe",
+    "把设计器打包成 exe 分发时，会把便携版 NSIS 一起带上，对方换电脑也不用装任何东西。": "When you package the designer as an exe, the portable NSIS is bundled in, so it works on another PC with nothing installed.",
+
+    # -- 程序属性预览（第 1 步左侧）--
+    "程序属性": "App Properties",
+    "{name} 属性": "{name} Properties",
+    "（留空）": "(empty)",
+    "删除属性和个人信息": "Remove Properties and Personal Information",
+    "属性": "Property",
+    "值": "Value",
+    "文件说明": "File description",
+    "应用程序": "Application",
+    "文件版本": "File version",
+    "产品名称": "Product name",
+    "产品版本": "Product version",
+    "版权": "Copyright",
+    "大小": "Size",
+    "修改日期": "Date modified",
+    "语言": "Language",
+    "简体中文(中国大陆), 英语(美国)": "Chinese (Simplified, China), English (United States)",
+    "原始文件名": "Original filename",
+    "应用(A)": "Apply",
+
+    # -- 快捷方式（现并入第 4 步「安装界面 → 安装选项页」）--
     "快捷方式": "Shortcuts",
     "桌面 / 开始菜单快捷方式": "Desktop / Start menu shortcuts",
     "决定安装时创建哪些快捷方式，以及用户能不能自己改":
@@ -457,7 +489,7 @@ EN: dict[str, str] = {
         "Adds a folder level, e.g. Start menu\\My Tool\\My Tool",
     "同时放一个「卸载」快捷方式": "Also add an \"Uninstall\" shortcut",
 
-    # -- 第 6 步：打包 --
+    # -- 第 5 步：打包 --
     "打包": "Build",
     "输出设置与编译": "Output settings and compile",
     "校验配置、生成安装脚本、编译出安装包":
@@ -739,7 +771,7 @@ EN: dict[str, str] = {
 
     # -- 教程正文（中文原文 -> English）--
     "它能帮你做什么": "What it can do for you",
-    "快速上手：6 步做出安装包": "Quick start: an installer in 6 steps",
+    "快速上手：5 步做出安装包": "Quick start: an installer in 5 steps",
     "图片不用自己做": "Images: no prep needed",
     "实时预览：改完立刻看到效果": "Live preview: see changes instantly",
     "进阶用法": "Advanced usage",
@@ -802,8 +834,8 @@ EN: dict[str, str] = {
         "With New Project, enter a name and a location (e.g. Desktop). A folder of that name is "
         "created to hold the project file and data folders, and the whole folder can be moved, "
         "zipped or backed up freely.",
-    "进入主界面后，按左边这 6 步走就行。下面逐步来看。":
-        "In the main window, just follow the 6 steps on the left. Let's go through them.",
+    "进入主界面后，按左边这 5 步走就行。下面逐步来看。":
+        "In the main window, just follow the 5 steps on the left. Let's go through them.",
     "第 1 步：基本信息": "Step 1: Basic Info",
     "填应用名称、版本、公司/作者、图标等。带 * 的是必填项。"
     "图标会用在安装包、桌面快捷方式和「程序和功能」列表里。":
@@ -832,9 +864,9 @@ EN: dict[str, str] = {
         "Step 3: ① pick the mode — all users needs admin (UAC); current user needs no admin; "
         "② you can set a custom path; ③ turning off the location page hides it.",
     "设置默认安装路径、用户数据与卸载选项。"
-    "「装给所有用户还是仅当前用户」不在这里选，而是第 6 步的输出选项。":
+    "「装给所有用户还是仅当前用户」不在这里选，而是第 5 步的输出选项。":
         "Set the default install path, user data and uninstall options. Whether it installs for "
-        "all users or just the current user is not chosen here — that's an output option in step 6.",
+        "all users or just the current user is not chosen here — that's an output option in step 5.",
     "第 3 步：①「使用默认路径」会按安装模式自动选一个位置，取消后可以自己填；"
     "②「允许用户修改安装位置」关掉后，安装时不显示安装位置页；"
     "③ 下面设置用户数据目录，以及卸载时是否询问保留数据。":
@@ -843,28 +875,21 @@ EN: dict[str, str] = {
         "③ below, set the user data folder and whether to ask about keeping it on uninstall.",
     "第 4 步：安装界面": "Step 4: Installer UI",
     "安装向导每一页的文案和图片都能改。上面选子标签"
-    "（欢迎页 / 许可协议 / 更新日志 / …），下面写文字、换图片。":
+    "（欢迎页 / 许可协议 / 更新日志 / 安装选项页 / …），下面写文字、换图片。":
         "Every page of the installer can be customized. Pick a tab above (Welcome / License / "
         "Changelog / …) and edit the text and images below.",
     "第 4 步：① 用标签页切换各个页面；② 在这里改当前页的标题等文案；"
     "③ 欢迎页左侧图片是竖版的，留空就用默认蓝色背景。":
         "Step 4: ① switch pages with the tabs; ② edit the current page's text here; "
         "③ the welcome left image is vertical; empty uses the default blue.",
-    "第 5 步：快捷方式": "Step 5: Shortcuts",
-    "决定安装时创建哪些快捷方式，以及用户能不能自己勾选。":
-        "Decide which shortcuts are created and whether the user can change them.",
-    "第 5 步：① 启用桌面快捷方式；②「允许用户在安装时修改」关掉后，"
-    "安装选项页上对应的复选框会变灰；③ 开始菜单快捷方式同理。":
-        "Step 5: ① enable the desktop shortcut; ② turning off \"let the user change it\" greys "
-        "out the matching checkbox on the Options page; ③ the Start menu shortcut works the same.",
-    "第 6 步：打包": "Step 6: Build",
+    "第 5 步：打包": "Step 5: Build",
     "选好这次要生成哪些版本，点「开始打包」，日志会实时输出。"
     "首次打包如果本机没装 NSIS，程序会提示怎么装。":
         "Choose the variants to build and click Start Build; the log updates live. If NSIS is not "
         "installed, the app tells you how to get it.",
-    "第 6 步：① 勾选「要生成哪些版本」；② 点「开始打包」；"
+    "第 5 步：① 勾选「要生成哪些版本」；② 点「开始打包」；"
     "③ 日志会实时输出编译过程，产物出现在工程的 out 目录里。":
-        "Step 6: ① tick the variants to build; ② click Start Build; ③ the log shows the compile "
+        "Step 5: ① tick the variants to build; ② click Start Build; ③ the log shows the compile "
         "in real time and the output lands in the project's out folder.",
     "打包前会自动保存工程。完成后点「打开输出目录」就能看到安装包。":
         "The project is saved before building. When done, click Open Output Folder.",
@@ -921,13 +946,13 @@ EN: dict[str, str] = {
     "所有用户可见": "Visible to all users",
     "仅当前用户": "Current user only",
     "注册表": "Registry",
-    "在第 3 步选默认模式，到第 6 步勾选这次要生成哪些版本。"
+    "在第 3 步选默认模式，到第 5 步勾选这次要生成哪些版本。"
     "勾了多个时，文件名会自动加 -PerMachine / -PerUser 后缀，避免互相覆盖。":
-        "Pick the default mode in step 3 and the variants in step 6. With several variants a "
+        "Pick the default mode in step 3 and the variants in step 5. With several variants a "
         "-PerMachine / -PerUser suffix is added to avoid overwriting.",
-    "在第 6 步「打包」里勾选这次要生成哪些版本（两种都勾也行）。"
+    "在第 5 步「打包」里勾选这次要生成哪些版本（两种都勾也行）。"
     "勾了多个时，文件名会自动加 -PerMachine / -PerUser 后缀，避免互相覆盖。":
-        "In step 6 (Build) tick the variants to build (both is fine). With several variants a "
+        "In step 5 (Build) tick the variants to build (both is fine). With several variants a "
         "-PerMachine / -PerUser suffix is added automatically to avoid overwriting.",
     "静默安装（方便批量部署）": "Silent install (for batch deployment)",
     "生成的安装包支持 NSIS 标准的 /S 参数，安装过程不弹界面；"
@@ -1002,9 +1027,9 @@ EN: dict[str, str] = {
     "工程换了电脑就打不开了": "The project won't open on another PC",
     "多半是工程里引用了工程目录之外的文件（绝对路径，或用 .. 跳出去）。"
     "添加文件时选「复制进工程」，整个文件夹就是自包含的了。"
-    "第 6 步校验时也会对这类引用给出警告。":
+    "第 5 步校验时也会对这类引用给出警告。":
         "It likely references files outside the project folder (absolute paths or ..). Choose "
-        "\"copy into the project\" when adding files to keep it self-contained. Step 6 warns "
+        "\"copy into the project\" when adding files to keep it self-contained. Step 5 warns "
         "about such references.",
     "控制面板里的卸载项互相覆盖": "Uninstall entries overwrite each other",
     "检查第 1 步的「内部标识」。不同的软件要有不同的标识；"
@@ -1068,12 +1093,12 @@ EN: dict[str, str] = {
         "Choose the variants to build and click Start Build; the log updates live. Ticking both "
         "variants produces two installers (with automatic -PerMachine / -PerUser suffixes). If "
         "NSIS is missing, the app tells you how to get it.",
-    "第 6 步：① 勾选「要生成哪些版本」；② 点「开始打包」；"
+    "第 5 步：① 勾选「要生成哪些版本」；② 点「开始打包」；"
     "③ 日志会实时输出编译过程。":
-        "Step 6: ① tick the variants to build; ② click Start Build; ③ the log shows the compile "
+        "Step 5: ① tick the variants to build; ② click Start Build; ③ the log shows the compile "
         "in real time.",
-    "安装包默认输出到桌面；在第 6 步「输出位置」里填一个目录就按填的走，留空恢复桌面。":
-        "The installer is written to the Desktop by default; set a folder in step 6 \"Output "
+    "安装包默认输出到桌面；在第 5 步「输出位置」里填一个目录就按填的走，留空恢复桌面。":
+        "The installer is written to the Desktop by default; set a folder in step 5 \"Output "
         "location\" to change it, or clear it to go back to the Desktop.",
 
     "新建的工程只有一个文件：「我的软件.jianpack」。"
@@ -1111,9 +1136,9 @@ EN: dict[str, str] = {
         "Project files use their own icon, different from the app icon, so you can tell a project "
         "file from a program at a glance.",
     "安装包输出到哪": "Where the installer goes",
-    "默认输出到桌面；在第 6 步「输出位置」里填一个目录就按那个目录走，"
+    "默认输出到桌面；在第 5 步「输出位置」里填一个目录就按那个目录走，"
     "留空又恢复成桌面。":
-        "By default it goes to the Desktop; set a folder in step 6 \"Output location\" to use that "
+        "By default it goes to the Desktop; set a folder in step 5 \"Output location\" to use that "
         "folder, or clear it to go back to the Desktop.",
 
     "① 下拉框可以切换要看哪一页；② 左下方是实时预览；"

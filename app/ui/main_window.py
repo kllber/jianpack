@@ -24,7 +24,6 @@ from .pages.build import BuildPage
 from .pages.files import FilesPage
 from .pages.install import InstallPage
 from .pages.interface import InterfacePage
-from .pages.shortcuts import ShortcutsPage
 from .new_project_dialog import NewProjectDialog
 from .preferences_dialog import PreferencesDialog
 from .preview import PANEL_WIDTH, PreviewPanel
@@ -36,7 +35,7 @@ from .welcome_dialog import WelcomeDialog
 from . import theme
 from .widgets import APP_FONT, TITLE_FONT
 
-STEPS = (BasicPage, FilesPage, InstallPage, InterfacePage, ShortcutsPage, BuildPage)
+STEPS = (BasicPage, FilesPage, InstallPage, InterfacePage, BuildPage)
 
 
 def project_file_types() -> list[tuple[str, str]]:

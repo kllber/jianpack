@@ -1,4 +1,4 @@
-﻿"""第 6 步：打包。"""
+﻿"""第 5 步：打包。"""
 
 from __future__ import annotations
 

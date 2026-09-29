@@ -13,16 +13,16 @@ from .base import StepPage
 class InstallPage(StepPage):
     title = "安装设置"
     description = "安装路径、用户数据与卸载"
-    subtitle = "决定默认装到哪、卸载时怎么处理用户数据（装给谁在第 6 步选）"
+    subtitle = "决定默认装到哪、卸载时怎么处理用户数据（装给谁在第 5 步选）"
 
     def build(self, parent: ttk.Frame) -> None:
         install = self.app.project.install
         uninstall = self.app.project.uninstall
 
-        # 「装给所有用户 / 仅当前用户」是输出选项，统一放到第 6 步多选，
+        # 「装给所有用户 / 仅当前用户」是输出选项，统一放到第 5 步多选，
         # 免得这里选一遍、那里再勾一遍，还容易和预览对不上。
         hint_label(parent,
-                   "装给「所有用户」还是「仅当前用户」在第 6 步「打包」里选，"
+                   "装给「所有用户」还是「仅当前用户」在第 5 步「打包」里选，"
                    "两种版本也能同时生成。这一页只管安装路径、用户数据和卸载。")
 
         location = self.section(parent, "安装位置")

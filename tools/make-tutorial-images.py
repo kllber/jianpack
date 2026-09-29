@@ -209,6 +209,21 @@ def pump(win, seconds: float = 0.35) -> None:
         time.sleep(0.02)
 
 
+def scroll_to(win, page, widget) -> None:
+    """把页面滚动到 widget 附近（保证它在可视区域里，截图/定位才准）。"""
+    if widget is None:
+        return
+    inner = page.body.inner
+    win.update_idletasks()
+    view_h = page.body.canvas.winfo_height()
+    inner_h = max(1, inner.winfo_height())
+    if inner_h <= view_h:
+        return
+    y = widget.winfo_rooty() - inner.winfo_rooty()
+    page.body.canvas.yview_moveto(max(0.0, min(1.0, (y - 16) / inner_h)))
+    win.update()
+
+
 def content_image(win, page):
     """抓「编辑区」，内容下方留一点空白即可，不要拖一条长长的空白。"""
     area = rect_of(win.content_area, win)
@@ -375,9 +390,17 @@ def shot_crop(win: MainWindow) -> None:
 
 
 def shot_shortcuts(win: MainWindow) -> None:
-    page = win._pages[4]
-    win._select_step(4)
-    pump(win)
+    """快捷方式现在在「第 4 步 → 安装选项页」里。"""
+    page = win._pages[3]
+    win._select_step(3)
+    notebook = getattr(page, "_notebook", None)
+    keys = list(getattr(page, "_tab_keys", []))
+    if notebook is not None and "安装选项页" in keys:
+        notebook.select(keys.index("安装选项页"))
+    pump(win, 0.4)
+    target = find(page, L("启用桌面快捷方式", "Enable the desktop shortcut"))
+    scroll_to(win, page, target)
+    pump(win, 0.3)
     image, origin = content_image(win, page)
     frame = Frame(image, origin, gutter=GUTTER)
     frame.ring(rect_of(find(page, L("启用桌面快捷方式", "Enable the desktop shortcut")), win), 1)
@@ -389,8 +412,8 @@ def shot_shortcuts(win: MainWindow) -> None:
 
 
 def shot_build(win: MainWindow) -> None:
-    page = win._pages[5]
-    win._select_step(5)
+    page = win._pages[4]
+    win._select_step(4)
     pump(win)
     image, origin = content_image(win, page)
     frame = Frame(image, origin, gutter=GUTTER)
