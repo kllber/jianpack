@@ -296,11 +296,6 @@ class NsiGenerator:
         for lang in version_lang_ids(interface.languages):
             for key, value, where in keys:
                 self.out.append(f'VIAddVersionKey /LANG={lang} "{key}" "{self.r(value, where)}"')
-        for key, value, where in keys:
-            self.out.append(f'VIAddVersionKey "{key}" "{self.r(value, where)}"')
-        if lang:
-            for key, value, where in keys:
-                self.out.append(f'VIAddVersionKey /LANG={lang} "{key}" "{self.r(value, where)}"')
         self.blank()
 
     def _emit_interface_defines(self) -> None:
