@@ -594,8 +594,13 @@ def _paint_finish(canvas, draw, ctx: PreviewContext) -> None:
     y = _draw_text(draw, ctx.expand(page.text), CLIENT_X + TEXT_X + 2, y + 12,
                    CLIENT_W - TEXT_X - 30, _font(12), spacing=5)
 
+    check_y = max(y + 14, 140)
     if page.run_app:
-        _checkbox(draw, TEXT_X + 2, max(y + 14, 140), True, ctx.expand(page.run_text))
+        _checkbox(draw, TEXT_X + 2, check_y, True, ctx.expand(page.run_text))
+        check_y += 18
+    if page.autostart_enabled:
+        _checkbox(draw, TEXT_X + 2, check_y, bool(page.autostart_default),
+                  ctx.expand(page.autostart_text))
 
     if page.link.enabled and page.link.text:
         link_y = SEPARATOR_Y - 34
@@ -620,18 +625,15 @@ APPINFO_W, APPINFO_H = 503, 440
 def _version_language_label(project: Project) -> str:
     """程序属性里「语言」那一行显示什么。
 
-    NSIS 总会带一个默认块（英语 - 美国）；我们再按所选语言额外写一个块。
+    NSIS 总会带一个默认块（英语 - 美国）；我们再按所选的每种语言各写一个块。
     """
-    from ..engine.nsi import version_lang_id
-
     names: list[str] = []
-    lang_id = version_lang_id(project.interface.language)
-    if lang_id == "2052":
-        names.append(_("简体中文(中国大陆)"))
-    elif lang_id == "1028":
-        names.append(_("中文(繁體，台灣)"))
+    for entry in project.interface.languages:
+        if entry.lcid == 1033 or not entry.name:
+            continue
+        names.append(_(entry.name))
     names.append(_("英语(美国)"))
-    return ", ".join(names)
+    return ", ".join(dict.fromkeys(names))
 
 
 def _render_appinfo(project: Project) -> Image.Image:

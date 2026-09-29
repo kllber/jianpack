@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import tkinter as tk
 from tkinter import ttk
 
-from ..widgets import hint_label, section
+from ...i18n import t as _
+from ..integration_dialog import EntryDialog
+from ..widgets import APP_FONT, hint_label, section
 from .base import StepPage
 
 
@@ -41,13 +44,93 @@ class BasicPage(StepPage):
         self.text(info, "一句话描述", app, "description",
                   hint="显示在程序属性里")
 
-        prop = self.section(parent, "程序属性")
-        self.combo(prop, "语言", self.app.project.interface, "language", [
-            ("zh-CN", "简体中文（中国大陆）"),
-            ("zh-TW", "中文（繁體，台灣）"),
-            ("en-US", "English（美国）"),
-        ], hint="安装包 exe 属性里「语言」显示的内容；不影响安装向导的界面语言。")
-
         assets = self.section(parent, "图标")
         self.image_field(assets, "程序图标", app, "icon", "icon",
                          hint="会用在安装包、桌面快捷方式、开始菜单和「程序和功能」列表里。")
+
+        self._languages_block(parent)
+
+    # -- 程序属性：语言（可多选）--------------------------------------------
+
+    def _languages_block(self, parent) -> None:
+        from ...core.project import LANGUAGES, LanguageEntry
+
+        interface = self.app.project.interface
+        box = self.section(parent, "程序属性")
+
+        ttk.Label(box, text=_("语言（可多选）")).pack(anchor="w")
+        hint_label(box, "安装包 exe 属性里会列出所选语言；英语(美国) 是 NSIS 自带的，总会显示。")
+
+        self._lang_items: list[tuple[str, int]] = list(LANGUAGES)
+        known = {lcid for _name, lcid in self._lang_items}
+        for entry in interface.languages:
+            if entry.lcid not in known:
+                self._lang_items.append((entry.name or f"LCID {entry.lcid}", entry.lcid))
+                known.add(entry.lcid)
+
+        listbox = tk.Listbox(box, selectmode="extended", height=6,
+                             exportselection=False, activestyle="none", font=APP_FONT)
+        for name, _lcid in self._lang_items:
+            listbox.insert("end", _(name))
+        for index, (_name, lcid) in enumerate(self._lang_items):
+            if any(entry.lcid == lcid for entry in interface.languages):
+                listbox.selection_set(index)
+        listbox.pack(fill="x")
+        listbox.bind("<<ListboxSelect>>", lambda _e: self._sync_languages())
+        self._lang_list = listbox
+
+        row = ttk.Frame(box)
+        row.pack(anchor="w", pady=(6, 0))
+        ttk.Button(row, text=_("自定义语言…"),
+                   command=self._add_language).pack(side="left")
+        ttk.Button(row, text=_("全选"),
+                   command=lambda: self._select_all_languages(True)).pack(side="left",
+                                                                         padx=(6, 0))
+        ttk.Button(row, text=_("全不选"),
+                   command=lambda: self._select_all_languages(False)).pack(side="left",
+                                                                           padx=(6, 0))
+
+        self._enter_actions.append(self._refresh_languages)
+
+    def _sync_languages(self) -> None:
+        from ...core.project import LanguageEntry
+
+        interface = self.app.project.interface
+        chosen = self._lang_list.curselection()
+        interface.languages = [LanguageEntry(name=name, lcid=lcid)
+                               for index, (name, lcid) in enumerate(self._lang_items)
+                               if index in chosen]
+        self.app.touch()
+
+    def _select_all_languages(self, on: bool) -> None:
+        self._lang_list.selection_clear(0, "end")
+        if on:
+            self._lang_list.selection_set(0, "end")
+        self._sync_languages()
+
+    def _add_language(self) -> None:
+        dialog = EntryDialog(self.winfo_toplevel(), _("自定义语言"), [
+            {"key": "name", "label": "语言名称", "hint": "会显示在预览和程序属性里"},
+            {"key": "lcid", "label": "语言 ID (LCID)",
+             "hint": "十进制或 0x 十六进制，例如 2052；写进版本信息用的就是它"},
+        ])
+        if dialog.result is None:
+            return
+        raw = str(dialog.result.get("lcid", "")).strip()
+        try:
+            lcid = int(raw, 0) if raw else 0
+        except ValueError:
+            lcid = 0
+        name = str(dialog.result.get("name", "")).strip() or f"LCID {lcid}"
+        self._lang_items.append((name, lcid))
+        self._lang_list.insert("end", name)
+        self._lang_list.selection_set("end")
+        self._sync_languages()
+
+    def _refresh_languages(self) -> None:
+        interface = self.app.project.interface
+        with self.app.quiet():
+            self._lang_list.selection_clear(0, "end")
+            for index, (_name, lcid) in enumerate(self._lang_items):
+                if any(entry.lcid == lcid for entry in interface.languages):
+                    self._lang_list.selection_set(index)

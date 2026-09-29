@@ -111,7 +111,7 @@ class InstallPage(StepPage):
     def _integration_block(self, parent: ttk.Frame) -> None:
         box = self.section(parent, "系统集成（高级）")
         self._drawer_open = tk.BooleanVar(value=False)
-        ttk.Checkbutton(box, text=_("展开：文件关联 / URL 协议 / 注册表 / 开机自启"),
+        ttk.Checkbutton(box, text=_("展开：文件关联 / URL 协议 / 注册表"),
                         variable=self._drawer_open,
                         command=self._toggle_drawer).pack(anchor="w")
         hint_label(box, "默认收起。只有需要让安装包替你做这些系统集成时才展开。")
@@ -145,11 +145,6 @@ class InstallPage(StepPage):
                 self._reg_view, _("编辑注册表项"), REG_FIELDS,
                 integration.registry, RegEntry),
             on_del=lambda: self._del_entry(self._reg_view, integration.registry))
-
-        auto = ttk.LabelFrame(self._drawer, text=" " + _("开机自启") + " ",
-                              padding=(12, 8, 12, 10))
-        auto.pack(fill="x", pady=(8, 0))
-        self.check(auto, "开机时自动启动本程序", integration, "autostart")
 
         self._enter_actions.append(self._refresh_integration)
         self._refresh_integration()

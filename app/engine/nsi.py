@@ -69,18 +69,20 @@ def placeholder_table(project: Project, mode: str) -> dict[str, str]:
     }
 
 
-def version_lang_id(code: str) -> str | None:
-    """程序属性「语言」对应的 NSIS LANG 号。
+def version_lang_ids(languages) -> list[str]:
+    """程序属性「语言」要写的 NSIS LANG 号（去重、按出现顺序）。
 
-    英语（或无法识别）返回 ``None`` —— 这时不额外写 /LANG，只保留 NSIS 自带的
-    默认块（英语 - 美国），属性里就只显示「英语(美国)」。
+    英语-美国（1033）不写 —— NSIS 自带一个默认块就是它，属性里总会显示。
     """
-    value = (code or "").lower()
-    if value.startswith("zh"):
-        if "tw" in value or "hk" in value or "hant" in value:
-            return "1028"                     # 中文（繁體，台灣）
-        return "2052"                         # 简体中文（中国大陆）
-    return None
+    ids: list[str] = []
+    for entry in languages or []:
+        lcid = getattr(entry, "lcid", 0)
+        if not lcid or lcid == 1033:
+            continue
+        value = str(lcid)
+        if value not in ids:
+            ids.append(value)
+    return ids
 
 
 class NsiGenerator:
@@ -118,6 +120,7 @@ class NsiGenerator:
         self._emit_compiler_and_meta(output_name)
         self._emit_interface_defines()
         self._emit_pages()
+        self._emit_autostart_function()
         self._emit_variables()
         self._emit_on_init()
         if self.has_changelog:
@@ -279,7 +282,6 @@ class NsiGenerator:
         self.blank()
 
         self.add(f'VIProductVersion "{self.r(app.file_version, "app.fileVersion")}"')
-        lang = version_lang_id(interface.language)
         keys = [
             ("ProductName", app.name, "app.name"),
             ("FileDescription", app.description, "app.description"),
@@ -289,6 +291,11 @@ class NsiGenerator:
             ("LegalCopyright", app.copyright, "app.copyright"),
             ("OriginalFilename", output_name, "build.fileName"),
         ]
+        for key, value, where in keys:
+            self.out.append(f'VIAddVersionKey "{key}" "{self.r(value, where)}"')
+        for lang in version_lang_ids(interface.languages):
+            for key, value, where in keys:
+                self.out.append(f'VIAddVersionKey /LANG={lang} "{key}" "{self.r(value, where)}"')
         for key, value, where in keys:
             self.out.append(f'VIAddVersionKey "{key}" "{self.r(value, where)}"')
         if lang:
@@ -377,6 +384,16 @@ class NsiGenerator:
         if finish.run_app and self.p.app.main_exe:
             self.add('!define MUI_FINISHPAGE_RUN "$INSTDIR\\${APP_EXE}"')
             self.define("MUI_FINISHPAGE_RUN_TEXT", finish.run_text, "interface.finish.runText")
+        if finish.autostart_enabled:
+            # 借 MUI2 的「显示说明文件」复选框来做「开机自启」：勾选时调用我们
+            # 自己的函数（MUI_FINISHPAGE_SHOWREADME_FUNCTION），所以那个「文件」
+            # 值用不到，留空即可。
+            self.add('!define MUI_FINISHPAGE_SHOWREADME ""')
+            self.define("MUI_FINISHPAGE_SHOWREADME_TEXT", finish.autostart_text,
+                        "interface.finish.autostartText")
+            self.add("!define MUI_FINISHPAGE_SHOWREADME_FUNCTION JianPackAutostart")
+            if not finish.autostart_default:
+                self.add("!define MUI_FINISHPAGE_SHOWREADME_NOTCHECKED")
         if finish.link.enabled and finish.link.url:
             self.define("MUI_FINISHPAGE_LINK", finish.link.text, "interface.finish.link.text")
             self.define("MUI_FINISHPAGE_LINK_LOCATION", finish.link.url, "interface.finish.link.url")
@@ -554,6 +571,18 @@ class NsiGenerator:
         self.add("FunctionEnd")
         self.blank()
 
+    def _emit_autostart_function(self) -> None:
+        """完成页勾了「开机自启」时写 Run 键（由 MUI2 在完成页调用）。"""
+        if not self.p.interface.finish.autostart_enabled:
+            return
+        self.comment("------ 完成页：勾选「开机自启」时写入 Run 键 ------")
+        self.add("Function JianPackAutostart")
+        self.add('  WriteRegStr ${REG_HIVE} '
+                 '"Software\\Microsoft\\Windows\\CurrentVersion\\Run" '
+                 '"${APP_NAME}" "$\\"$INSTDIR\\${APP_EXE}$\\""')
+        self.add("FunctionEnd")
+        self.blank()
+
     def _emit_install_sections(self) -> None:
         app = self.p.app
         uninstall = self.p.uninstall
@@ -601,11 +630,10 @@ class NsiGenerator:
     def _emit_integration_section(self) -> None:
         """文件关联 / URL 协议 / 注册表 / 开机自启（安装时写入）。"""
         itg = self.p.integration
-        if not (itg.associations or itg.protocols or itg.registry or itg.autostart):
+        if not (itg.associations or itg.protocols or itg.registry):
             return
 
         app_exe = "$INSTDIR\\${APP_EXE}"
-        run_key = "Software\\Microsoft\\Windows\\CurrentVersion\\Run"
 
         self.add('Section "系统集成" SecIntegration')
         self.add("  SectionIn RO")
@@ -670,12 +698,6 @@ class NsiGenerator:
                     self.add(f'  {command} {hive} "{path}" "{name}" "{data}"')
                 else:
                     self.add(f'  {command} {hive} "{path}" "" "{data}"')
-            self.blank()
-
-        if itg.autostart:
-            self.comment("  开机自启")
-            self.add(f'  WriteRegStr ${{REG_HIVE}} "{run_key}" "${{APP_NAME}}" '
-                     f'"$\\"{app_exe}$\\""')
             self.blank()
 
         self.add("SectionEnd")
@@ -802,9 +824,6 @@ class NsiGenerator:
                 self.add(f'  DeleteRegValue {hive} "{path}" "{name}"')
             else:
                 self.add(f'  DeleteRegKey {hive} "{path}"')
-        if itg.autostart:
-            self.add('  DeleteRegValue ${REG_HIVE} '
-                     '"Software\\Microsoft\\Windows\\CurrentVersion\\Run" "${APP_NAME}"')
 
     def _emit_uninstall(self) -> None:
         desktop = self.p.shortcuts.desktop
@@ -858,6 +877,9 @@ class NsiGenerator:
             self.out.append(f'  Delete "$DESKTOP\\{name}.lnk"')
         self.blank()
         self.add("  ; 系统集成")
+        if self.p.interface.finish.autostart_enabled:
+            self.add('  DeleteRegValue ${REG_HIVE} '
+                     '"Software\\Microsoft\\Windows\\CurrentVersion\\Run" "${APP_NAME}"')
         self._emit_integration_uninstall()
         self.add("  ; 程序文件")
         self.add('  RMDir /r "$INSTDIR"')

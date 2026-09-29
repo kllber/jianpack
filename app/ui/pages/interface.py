@@ -270,6 +270,14 @@ class InterfacePage(StepPage):
         self.text(run_body, "复选框文字", interface.finish, "run_text", label_width=11)
         self.gate(run_body, lambda: bool(run_on.get()), [run_on])
 
+        auto_on = self.check(page, "提供「开机自启」复选框", interface.finish,
+                             "autostart_enabled")
+        auto_body = ttk.Frame(page)
+        auto_body.pack(fill="x")
+        self.text(auto_body, "复选框文字", interface.finish, "autostart_text", label_width=11)
+        self.check(auto_body, "默认勾选", interface.finish, "autostart_default")
+        self.gate(auto_body, lambda: bool(auto_on.get()), [auto_on])
+
         link_on = self.check(page, "显示超链接", interface.finish.link, "enabled")
         link_body = ttk.Frame(page)
         link_body.pack(fill="x")

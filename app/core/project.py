@@ -350,6 +350,10 @@ class FinishPage:
     text: str = ""
     run_app: bool = True
     run_text: str = "立即运行 {appName}"
+    # 完成页上的「开机自启」复选框（勾选时写入 Run 键）
+    autostart_enabled: bool = False
+    autostart_default: bool = False
+    autostart_text: str = "开机自动启动 {appName}"
     link: FinishLink = field(default_factory=FinishLink)
 
     @classmethod
@@ -360,13 +364,66 @@ class FinishPage:
             text=_s(d, "text", where),
             run_app=_b(d, "runApp", where, True),
             run_text=_s(d, "runText", where, base.run_text),
+            autostart_enabled=_b(d, "autostartEnabled", where, False),
+            autostart_default=_b(d, "autostartDefault", where, False),
+            autostart_text=_s(d, "autostartText", where, base.autostart_text),
             link=FinishLink.from_dict(_obj(d.get("link"), f"{where}.link"), f"{where}.link"),
         )
 
 
+# 常见语言：显示名 + LCID（第 1 步的选择列表、预览都用它）
+LANGUAGES: tuple[tuple[str, int], ...] = (
+    ("简体中文(中国大陆)", 2052),
+    ("中文(繁體，台灣)", 1028),
+    ("English (United States)", 1033),
+    ("日本語", 1041),
+    ("한국어", 1042),
+    ("Deutsch", 1031),
+    ("Français", 1036),
+    ("Español (España)", 3082),
+    ("Português (Brasil)", 1046),
+    ("Русский", 1049),
+    ("Italiano", 1040),
+    ("Nederlands", 1043),
+    ("Polski", 1045),
+    ("Türkçe", 1055),
+    ("العربية (السعودية)", 1025),
+    ("ไทย", 1054),
+    ("Tiếng Việt", 1066),
+    ("Bahasa Indonesia", 1057),
+)
+
+
+@dataclass
+class LanguageEntry:
+    """装进安装包 exe「属性 → 语言」里的一项语言。"""
+
+    name: str = ""          # 显示名（预览里显示这个）
+    lcid: int = 0           # 语言 ID；写进版本信息用的是它
+
+    @classmethod
+    def from_dict(cls, d: dict, where: str) -> "LanguageEntry":
+        raw = d.get("lcid", 0)
+        if isinstance(raw, str):
+            try:
+                raw = int(raw, 0)
+            except ValueError:
+                raw = 0
+        if not isinstance(raw, int):
+            raise ProjectFileError(
+                _("{where}.lcid: 期望整数，当前是 {value}").format(
+                    where=where, value=repr(d.get("lcid"))))
+        return cls(name=_s(d, "name", where), lcid=raw)
+
+
+def default_languages() -> list[LanguageEntry]:
+    return [LanguageEntry(name="简体中文(中国大陆)", lcid=2052)]
+
+
 @dataclass
 class InterfaceSection:
-    language: str = "zh-CN"
+    language: str = "zh-CN"          # 兼容旧工程（新工程用 languages）
+    languages: list[LanguageEntry] = field(default_factory=default_languages)
     branding_text: str = "{appName} 安装程序 v{appVersion}"
     show_abort_warning: bool = True
     show_details: bool = True
@@ -380,8 +437,20 @@ class InterfaceSection:
 
     @classmethod
     def from_dict(cls, d: dict, where: str) -> "InterfaceSection":
+        languages = [LanguageEntry.from_dict(_obj(x, f"{where}.languages[{i}]"),
+                                            f"{where}.languages[{i}]")
+                     for i, x in enumerate(d.get("languages") or [])]
+        if not languages:
+            # 旧工程只有单个 language（"zh-CN" / "en-US"），转成一条
+            code = _s(d, "language", where, "zh-CN")
+            if code.lower().startswith("zh"):
+                languages = ([LanguageEntry(name="中文(繁體，台灣)", lcid=1028)]
+                             if "tw" in code.lower() else default_languages())
+            else:
+                languages = [LanguageEntry(name="English (United States)", lcid=1033)]
         return cls(
             language=_s(d, "language", where, "zh-CN"),
+            languages=languages,
             branding_text=_s(d, "brandingText", where, "{appName} 安装程序 v{appVersion}"),
             show_abort_warning=_b(d, "showAbortWarning", where, True),
             show_details=_b(d, "showDetails", where, True),
@@ -561,16 +630,18 @@ class RegEntry:
 
 @dataclass
 class IntegrationSection:
-    """安装时对系统做的「集成」：文件关联 / URL 协议 / 注册表 / 开机自启。"""
+    """安装时对系统做的「集成」：文件关联 / URL 协议 / 注册表。
+
+    「开机自启」不在这里 —— 它属于完成页的复选框（见 ``FinishPage``）。
+    """
 
     associations: list[AssocEntry] = field(default_factory=list)
     protocols: list[ProtocolEntry] = field(default_factory=list)
     registry: list[RegEntry] = field(default_factory=list)
-    autostart: bool = False
 
     @classmethod
     def from_dict(cls, d: dict, where: str) -> "IntegrationSection":
-        def items(key: str, kind, cast):
+        def items(key: str, cast):
             raw = d.get(key)
             if raw is None:
                 return []
@@ -581,10 +652,9 @@ class IntegrationSection:
                     for i, x in enumerate(raw)]
 
         return cls(
-            associations=items("associations", AssocEntry, AssocEntry.from_dict),
-            protocols=items("protocols", ProtocolEntry, ProtocolEntry.from_dict),
-            registry=items("registry", RegEntry, RegEntry.from_dict),
-            autostart=_b(d, "autostart", where, False),
+            associations=items("associations", AssocEntry.from_dict),
+            protocols=items("protocols", ProtocolEntry.from_dict),
+            registry=items("registry", RegEntry.from_dict),
         )
 
 

@@ -645,15 +645,22 @@ def test_preview(work: Path) -> None:
     check("换一个版本预览路径也跟着变",
           "Program Files" in preview._sample_dir(project), preview._sample_dir(project))
 
-    # 程序属性的「语言」要跟着第 1 步的设置走
-    project.interface.language = "zh-CN"
+    # 程序属性的「语言」跟着第 1 步的多选走
+    from app.core.project import LanguageEntry
+
+    project.interface.languages = [LanguageEntry(name="简体中文(中国大陆)", lcid=2052)]
     zh_label = preview._version_language_label(project)
-    project.interface.language = "en-US"
+    project.interface.languages = [
+        LanguageEntry(name="简体中文(中国大陆)", lcid=2052),
+        LanguageEntry(name="日本語", lcid=1041)]
+    multi_label = preview._version_language_label(project)
+    project.interface.languages = [LanguageEntry(name="English", lcid=1033)]
     en_label = preview._version_language_label(project)
-    check("程序属性语言跟随设置（中/英）",
-          "简体" in zh_label and "英语" in zh_label and "简体" not in en_label,
-          f"{zh_label!r} / {en_label!r}")
-    project.interface.language = "zh-CN"
+    check("程序属性语言跟随多选设置",
+          "简体" in zh_label and "简体" not in en_label
+          and "日本語" in multi_label and "简体" in multi_label,
+          f"{zh_label!r} / {multi_label!r} / {en_label!r}")
+    project.interface.languages = [LanguageEntry(name="简体中文(中国大陆)", lcid=2052)]
 
     # --- 面板装进主窗口后，编辑区不能被挤坏
     window = MainWindow(str(work / DEMO.name))
@@ -833,7 +840,8 @@ def test_container(work: Path) -> None:
     rich.integration.protocols = [ProtocolEntry(scheme="t", description="dd")]
     rich.integration.registry = [
         RegEntry(root="HKLM", path="Software\\T", name="n", type="REG_DWORD", data="7")]
-    rich.integration.autostart = True
+    rich.interface.finish.autostart_enabled = True
+    rich.interface.finish.autostart_default = True
     rich.build.sign_enabled = True
     rich.build.sign_cert = "a.pfx"
     rich.build.sign_password = "pw"
@@ -850,7 +858,8 @@ def test_container(work: Path) -> None:
               and rich2.integration.registry[0].root == "HKLM"
               and rich2.integration.registry[0].type == "REG_DWORD"
               and rich2.integration.registry[0].data == "7"
-              and rich2.integration.autostart is True
+              and rich2.interface.finish.autostart_enabled is True
+              and rich2.interface.finish.autostart_default is True
               and rich2.build.sign_enabled is True
               and rich2.build.sign_cert == "a.pfx"
               and rich2.build.sign_password == "pw")

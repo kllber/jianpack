@@ -79,9 +79,15 @@ def shot(window: MainWindow, path: Path) -> None:
     window.update()
     time.sleep(0.35)
     window.update()
-    x, y = window.winfo_rootx(), window.winfo_rooty()
-    w, h = window.winfo_width(), window.winfo_height()
-    ImageGrab.grab(bbox=(x, y, x + w, y + h)).save(path)
+    # Tk 给的是逻辑像素，ImageGrab 抓的是物理像素：高 DPI 屏上必须换算，
+    # 否则抓出来的画面会整体偏移。
+    scale = ImageGrab.grab().width / max(1, window.winfo_screenwidth())
+    x, y = window.winfo_rootx() * scale, window.winfo_rooty() * scale
+    w, h = window.winfo_width() * scale, window.winfo_height() * scale
+    image = ImageGrab.grab(bbox=(round(x), round(y), round(x + w), round(y + h)))
+    if abs(scale - 1.0) > 0.01:
+        image = image.resize((window.winfo_width(), window.winfo_height()), Image.LANCZOS)
+    image.save(path)
     print("  ->", path.name)
 
 

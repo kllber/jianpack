@@ -38,6 +38,33 @@ def main() -> int:
         data = json.loads(SRC.read_text(encoding="utf-8"))
         data["project"]["name"] = DEMO_NAME
         data["build"]["outputDir"] = ""      # 与默认一致：测试打包时输出到桌面
+
+        # 让自带的演示工程能真看到这些功能：多语言、完成页「开机自启」、系统集成
+        interface = data.setdefault("interface", {})
+        interface["languages"] = [
+            {"name": "简体中文(中国大陆)", "lcid": 2052},
+            {"name": "中文(繁體，台灣)", "lcid": 1028},
+        ]
+        finish = interface.setdefault("finish", {})
+        finish["autostartEnabled"] = True
+        finish["autostartDefault"] = True
+        finish["autostartText"] = "开机自动启动 {appName}"
+        data["integration"] = {
+            "associations": [
+                {"ext": ".demo", "description": "简包装演示文件",
+                 "icon": "", "isDefault": True},
+            ],
+            "protocols": [
+                {"scheme": "jiandemo", "description": "简包装演示协议"},
+            ],
+            "registry": [
+                {"root": "HKCU", "path": "Software\\JianPackDemo",
+                 "name": "InstalledBy", "type": "REG_SZ", "data": "JianPack"},
+                {"root": "HKCU", "path": "Software\\JianPackDemo",
+                 "name": "Usage", "type": "REG_DWORD", "data": "1"},
+            ],
+        }
+
         project_json = work / "demo.jianpack"
         project_json.write_text(json.dumps(data, ensure_ascii=False, indent=2),
                                 encoding="utf-8")

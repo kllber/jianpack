@@ -447,6 +447,23 @@ EN: dict[str, str] = {
     "发给别人：打包成 exe": "Sharing: build the designer as an exe",
     "把设计器打包成 exe 分发时，会把便携版 NSIS 一起带上，对方换电脑也不用装任何东西。": "When you package the designer as an exe, the portable NSIS is bundled in, so it works on another PC with nothing installed.",
 
+    # -- 第 1 步：多语言 --
+    "语言（可多选）": "Languages (multiple allowed)",
+    "自定义语言…": "Custom language…",
+    "自定义语言": "Custom language",
+    "全选": "Select all",
+    "全不选": "Select none",
+    "语言名称": "Language name",
+    "会显示在预览和程序属性里": "Shown in the preview and in the exe's properties",
+    "语言 ID (LCID)": "Language ID (LCID)",
+    "十进制或 0x 十六进制，例如 2052；写进版本信息用的就是它": "Decimal or 0x hex, e.g. 2052; this is what goes into the version info",
+    "安装包 exe 属性里会列出所选语言；英语(美国) 是 NSIS 自带的，总会显示。": "The installer exe will list the selected languages; English (United States) is built into NSIS and always shows.",
+
+    # -- 完成页：开机自启 --
+    "提供「开机自启」复选框": "Offer an \"Auto-start on sign-in\" checkbox",
+    "开机自动启动 {appName}": "Start {appName} automatically at sign-in",
+    "展开：文件关联 / URL 协议 / 注册表": "Expand: file associations / URL protocols / registry",
+
     # -- 系统集成（第 3 步 高级）--
     "系统集成（高级）": "System integration (advanced)",
     "展开：文件关联 / URL 协议 / 注册表 / 开机自启": "Expand: file associations / URL protocols / registry / run at startup",
@@ -485,6 +502,11 @@ EN: dict[str, str] = {
     "字符串 REG_SZ": "String REG_SZ",
     "可展开字符串 REG_EXPAND_SZ": "Expandable string REG_EXPAND_SZ",
     "32 位数字 REG_DWORD": "32-bit number REG_DWORD",
+
+    # -- 教程补充词条（第二轮）--
+    "下面「程序属性 → 语言」可以多选：安装包 exe 的「属性 → 语言」里会列出所选语言（英语-美国 是 NSIS 自带的，总会显示）。": "Below, \"App Properties → Languages\" lets you pick several: the installer exe's Properties → Language will list the chosen languages (English (United States) is built into NSIS and always shows).",
+    "页面最底下还有「系统集成（高级）」，点开可以配置：文件类型关联、URL 协议、自定义注册表项。安装时写入，卸载时自动清理。": "At the very bottom of this page there is \"System integration (advanced)\": expand it to set file associations, URL protocols and custom registry entries. They are written during install and cleaned up on uninstall.",
+    "「完成页」里除了「立即运行」，还能加一个「开机自启」复选框——用户勾了就写进注册表，开机自动启动你的程序（可以设成默认勾选）。": "On the Finish page, besides \"Run now\", you can add an \"Auto-start on sign-in\" checkbox — if the user ticks it we write a registry entry so your program starts at sign-in (it can be checked by default).",
 
     # -- 代码签名 --
     "代码签名": "Code signing",

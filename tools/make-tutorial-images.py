@@ -80,16 +80,42 @@ def rect_of(widget, win) -> tuple[int, int, int, int]:
     return (x, y, x + widget.winfo_width(), y + widget.winfo_height())
 
 
+_SCREEN_SCALE = None
+
+
+def screen_scale(win) -> float:
+    """物理像素 / 逻辑像素 的比例（高 DPI 屏上不是 1）。
+
+    Tk 的坐标是逻辑像素，而 ImageGrab 用的是物理像素 —— 不换算的话抓图会整体偏移。
+    """
+    global _SCREEN_SCALE
+    if _SCREEN_SCALE is None:
+        try:
+            _SCREEN_SCALE = ImageGrab.grab().width / max(1, win.winfo_screenwidth())
+        except Exception:  # noqa: BLE001
+            _SCREEN_SCALE = 1.0
+    return _SCREEN_SCALE
+
+
 def grab(win, box: tuple[int, int, int, int] | None = None):
-    """抓窗口的一块区域，返回 (图片, 这块区域在窗口里的左上角)。"""
+    """抓窗口的一块区域，返回 (图片, 这块区域在窗口里的左上角)。
+
+    上层给的是**逻辑像素**（和 Tk 一致）；这里换算成物理像素去抓，再缩回逻辑尺寸，
+    这样用 winfo_rootx() 得到的坐标去标注才不会有偏差。
+    """
     win.update_idletasks()
     win.update()
-    origin_x, origin_y = win.winfo_rootx(), win.winfo_rooty()
+    scale = screen_scale(win)
+    origin_x = win.winfo_rootx() * scale
+    origin_y = win.winfo_rooty() * scale
     if box is None:
         box = (0, 0, win.winfo_width(), win.winfo_height())
     x0, y0, x1, y1 = box
-    image = ImageGrab.grab(bbox=(origin_x + x0, origin_y + y0,
-                                 origin_x + x1, origin_y + y1))
+    image = ImageGrab.grab(bbox=(round(origin_x + x0 * scale), round(origin_y + y0 * scale),
+                                 round(origin_x + x1 * scale), round(origin_y + y1 * scale)))
+    if abs(scale - 1.0) > 0.01 and image.width:
+        image = image.resize((max(1, round(image.width / scale)),
+                              max(1, round(image.height / scale))), Image.LANCZOS)
     return image, (x0, y0)
 
 
@@ -225,7 +251,14 @@ def scroll_to(win, page, widget) -> None:
 
 
 def content_image(win, page):
-    """抓「编辑区」，内容下方留一点空白即可，不要拖一条长长的空白。"""
+    """抓「编辑区」，内容下方留一点空白即可，不要拖一条长长的空白。
+
+    先整窗抓一张、再按「窗口内坐标」裁剪 —— 这样即使窗口刚定位、winfo_rootx
+    暂时不准，也不会把左栏错抓进来（两个坐标同源，误差相互抵消）。
+    """
+    win.update_idletasks()
+    win.update()
+    full, _origin = grab(win)
     area = rect_of(win.content_area, win)
     section_bottom = area[1]
     for child in page.form.winfo_children():
@@ -233,7 +266,9 @@ def content_image(win, page):
             section_bottom = max(section_bottom, child.winfo_rooty() - win.winfo_rooty()
                                  + child.winfo_height())
     bottom = min(area[3], max(area[1] + MIN_CROP_H, section_bottom + 72))
-    return grab(win, (area[0], area[1], area[2], bottom))
+    box = (max(0, area[0]), max(0, area[1]),
+           min(full.width, area[2]), min(full.height, bottom))
+    return full.crop(box), (box[0], box[1])
 
 
 def make_sample_photo(path: Path) -> None:

@@ -85,7 +85,11 @@ def project_to_dict(project: Project) -> dict:
             "estimatedSizeAuto": install.estimated_size_auto,
         },
         "interface": {
+            # language 是早期版本的单语言字段，现在由 languages 取代；
+            # 为了不丢字段、也让旧版本还能读懂，继续写出来（旧版只认它）。
             "language": interface.language,
+            "languages": [{"name": item.name, "lcid": item.lcid}
+                          for item in interface.languages],
             "brandingText": interface.branding_text,
             "showAbortWarning": interface.show_abort_warning,
             "showDetails": interface.show_details,
@@ -131,6 +135,9 @@ def project_to_dict(project: Project) -> dict:
                 "text": interface.finish.text,
                 "runApp": interface.finish.run_app,
                 "runText": interface.finish.run_text,
+                "autostartEnabled": interface.finish.autostart_enabled,
+                "autostartDefault": interface.finish.autostart_default,
+                "autostartText": interface.finish.autostart_text,
                 "link": {
                     "enabled": interface.finish.link.enabled,
                     "text": interface.finish.link.text,
@@ -187,7 +194,6 @@ def project_to_dict(project: Project) -> dict:
                  "type": r.type, "data": r.data}
                 for r in integration.registry
             ],
-            "autostart": integration.autostart,
         },
     }
 
