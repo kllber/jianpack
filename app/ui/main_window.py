@@ -19,8 +19,8 @@ from .. import i18n
 from ..i18n import t as _, app_name
 from . import resources
 from .about_dialog import AboutDialog
+from .build_panel import BuildPanel
 from .pages.basic import BasicPage
-from .pages.build import BuildPage
 from .pages.files import FilesPage
 from .pages.install import InstallPage
 from .pages.interface import InterfacePage
@@ -35,7 +35,7 @@ from .welcome_dialog import WelcomeDialog
 from . import theme
 from .widgets import APP_FONT, TITLE_FONT
 
-STEPS = (BasicPage, FilesPage, InstallPage, InterfacePage, BuildPage)
+STEPS = (BasicPage, FilesPage, InstallPage, InterfacePage)
 
 
 def project_file_types() -> list[tuple[str, str]]:
@@ -389,20 +389,24 @@ class MainWindow(tk.Tk):
         return job
 
     @staticmethod
-    def _shortcut(action):
+    def _shortcut(action, keycode: int | None = None):
         """把动作包成按键回调，顺便挡掉「中文输入法误报的功能键」。
 
         Windows 上 Tk 处理输入法合成时有个老问题（CPython issue #125349）：
         在中文输入法里敲字母再按回车确认，Tk 会**额外**发出一个 keysym 被错报
-        成 F1 / F5 / F3 的假事件。不拦的话：输入 "p"+回车 会弹出「使用教程」，
-        输入 "t"+回车 会跳到「打包」页。
+        成 F1 / F5 / F3 的假事件。不拦的话：输入 "p"+回车 会弹出「使用教程」。
 
-        真假事件的区别（两个特征任取其一即可，这里都检查）：
-        - 真的功能键事件 ``char`` 是空的，假事件的 ``char`` 往往是刚敲的字母；
-        - 假事件是 Tk 内部合成的，``send_event`` 为真；真实按键为假。
+        真假事件的判据（两个都查，兼容性最好）：
+        - 真的功能键 ``char`` 是空的；假事件的 ``char`` 是刚敲的那个字母；
+        - 真功能键的**虚拟键码**就是 F1/F5 自己（112 / 116）；假事件带的是字母的键码。
+
+        注意：**不能**用 ``send_event`` 判断 —— 实测真按键在某些环境下
+        ``send_event`` 也是真，用它会把真的 F 键一起挡掉。
         """
         def handler(event) -> None:
-            if getattr(event, "send_event", False) or getattr(event, "char", ""):
+            if getattr(event, "char", ""):
+                return
+            if keycode and getattr(event, "keycode", 0) not in (0, keycode):
                 return
             action()
         return handler
@@ -473,6 +477,11 @@ class MainWindow(tk.Tk):
 
         ttk.Separator(self.left_column, orient="horizontal").pack(fill="x", padx=12)
 
+        # 「开始打包」常驻左栏底部：按钮 + 日志，随时能点（原来是一个独立的步骤页）
+        self.build_panel = BuildPanel(self.left_column, self.app)
+        self.build_panel.window = self
+        self.build_panel.pack(side="bottom", fill="x", padx=12, pady=(4, 8))
+
         self.preview_panel = PreviewPanel(self.left_column, self.app)
         self.preview_panel.pack(fill="both", expand=True, pady=(8, 0))
 
@@ -494,8 +503,8 @@ class MainWindow(tk.Tk):
         self.bind("<Control-o>", lambda _e: self.open_project())
         self.bind("<Control-s>", lambda _e: self.save())
         self.bind("<Control-S>", lambda _e: self.save_as())
-        self.bind("<F5>", self._shortcut(self.validate_project))
-        self.bind("<F1>", self._shortcut(self.open_tutorial))
+        self.bind("<F5>", self._shortcut(self.validate_project, 116))
+        self.bind("<F1>", self._shortcut(self.open_tutorial, 112))
         self.bind("<Control-comma>", lambda _e: self.open_preferences())
         self.bind("<Control-p>", lambda _e: self._toggle_preview_from_key())
         # 窗口每次显示出来都（重新）去掉最大化按钮

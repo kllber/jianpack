@@ -220,7 +220,7 @@ class InterfacePage(StepPage):
         self._shortcuts_block(page)
 
     def _shortcuts_block(self, parent) -> None:
-        """桌面 / 开始菜单快捷方式（原来独立的「第 5 步」，现并入本页）。"""
+        """桌面 / 开始菜单快捷方式（原来独立的「快捷方式」步骤，现并入本页）。"""
         shortcuts = self.app.project.shortcuts
 
         def group(title: str) -> ttk.LabelFrame:

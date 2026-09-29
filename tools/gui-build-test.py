@@ -44,23 +44,24 @@ def main() -> int:
 
     window._select_step(len(window._pages) - 1)
     page = window._pages[-1]
+    panel = window.build_panel            # 打包动作现在在左栏
     pump(window, 0.3)
 
     print("=== 1. 点「校验工程」")
-    page.run("validate")
+    panel.run("validate")
     pump(window, 1.5)
-    print(page.log.get("1.0", "end").rstrip())
+    print(panel.log.get("1.0", "end").rstrip())
 
     print()
     print("=== 2. 点「开始打包」")
-    page.run("build")
+    panel.run("build")
     deadline = time.time() + 300
-    while page._busy and time.time() < deadline:
+    while panel._busy and time.time() < deadline:
         window.update()
         time.sleep(0.1)
     pump(window, 0.5)
 
-    log = page.log.get("1.0", "end").rstrip()
+    log = panel.log.get("1.0", "end").rstrip()
     print(log)
 
     if out_dir and "打包完成" in log:

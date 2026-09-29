@@ -7,7 +7,7 @@ from tkinter import ttk
 
 from ...i18n import t as _
 from ..integration_dialog import EntryDialog
-from ..widgets import APP_FONT, hint_label, section
+from ..widgets import APP_FONT, hint_label, keep_wheel_inside, section
 from .base import StepPage
 
 
@@ -77,6 +77,7 @@ class BasicPage(StepPage):
                 listbox.selection_set(index)
         listbox.pack(fill="x")
         listbox.bind("<<ListboxSelect>>", lambda _e: self._sync_languages())
+        keep_wheel_inside(listbox)      # 滚轮只滚列表，别把整页也带着滚
         self._lang_list = listbox
 
         row = ttk.Frame(box)

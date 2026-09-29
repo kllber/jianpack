@@ -8,11 +8,10 @@ from tkinter import ttk
 from ...core.project import AssocEntry, ProtocolEntry, RegEntry
 from ...i18n import t as _
 from ..integration_dialog import EntryDialog
-from ..widgets import hint_label, section
+from ..widgets import hint_label, keep_wheel_inside, section
 from .base import StepPage
 
-ASSOC_FIELDS = [
-    {"key": "ext", "label": "扩展名", "hint": "例如 .myext（带不带点都行）"},
+ASSOC_FIELDS = [    {"key": "ext", "label": "扩展名", "hint": "例如 .myext（带不带点都行）"},
     {"key": "description", "label": "描述", "hint": "显示在「打开方式」里"},
     {"key": "icon", "label": "图标", "hint": "安装目录内的相对路径；留空用主程序图标"},
     {"key": "is_default", "label": "设为默认打开方式", "kind": "check"},
@@ -35,20 +34,26 @@ REG_FIELDS = [
 ]
 
 
+MODE_TEXT = (
+    ("perMachine", "为所有用户安装（需要管理员权限，装到 Program Files）"),
+    ("perUser", "仅当前用户安装（免提权，装到 %LOCALAPPDATA%\\Programs）"),
+)
+
+
 class InstallPage(StepPage):
     title = "安装设置"
     description = "安装路径、用户数据与卸载"
-    subtitle = "决定默认装到哪、卸载时怎么处理用户数据（装给谁在第 5 步选）"
+    subtitle = "安装路径、用户数据与卸载；输出与编译也在这里"
 
     def build(self, parent: ttk.Frame) -> None:
         install = self.app.project.install
         uninstall = self.app.project.uninstall
 
-        # 「装给所有用户 / 仅当前用户」是输出选项，统一放到第 5 步多选，
-        # 免得这里选一遍、那里再勾一遍，还容易和预览对不上。
+        # 「装给所有用户 / 仅当前用户」以及输出、签名都收在这一页
+        # （原来单独一个「打包」步骤；动作按钮移到了左栏常驻面板）。
         hint_label(parent,
-                   "装给「所有用户」还是「仅当前用户」在第 5 步「打包」里选，"
-                   "两种版本也能同时生成。这一页只管安装路径、用户数据和卸载。")
+                   "装给「所有用户」还是「仅当前用户」在本页下面的「要生成哪些版本」里选，"
+                   "两种版本也能同时生成。打包动作在左下角常驻的「开始打包」面板里。")
 
         location = self.section(parent, "安装位置")
         self.auto_dir = tk.BooleanVar(value=install.default_dir is None)
@@ -104,7 +109,68 @@ class InstallPage(StepPage):
         self.gate(silent_row, has_data, [path_var])
 
         self._integration_block(parent)
+        self._output_block(parent)
         self._sync_dir_state()
+
+    # -- 输出与编译 ---------------------------------------------------------
+
+    def _output_block(self, parent: ttk.Frame) -> None:
+        """原来「打包」步骤里的设置，现在并到这一页（动作按钮在左栏）。"""
+        build = self.app.project.build
+
+        modes = self.section(parent, "要生成哪些版本")
+        hint_label(modes, "勾一个就出一个安装包，勾两个就两个一起出；文件名会自动加 "
+                          "-PerMachine / -PerUser 后缀，避免互相覆盖。")
+        self.mode_vars: dict[str, tk.BooleanVar] = {}
+        for key, text in MODE_TEXT:
+            var = tk.BooleanVar(value=key in build.modes)
+            ttk.Checkbutton(modes, text=_(text), variable=var).pack(anchor="w", pady=2)
+            var.trace_add("write", lambda *_: self.app.touch())
+            self.mode_vars[key] = var
+
+        output = self.section(parent, "输出设置")
+        self.path(output, "输出位置", build, "output_dir", mode="dir", optional=True,
+                  hint="留空 = 输出到桌面；也可以填绝对路径（相对路径按工程文件所在目录算）")
+        self.text(output, "文件名", build, "file_name",
+                  hint="可以用 {appName} {appVersion}")
+        self.combo(output, "压缩方式", build, "compression", [
+            ("solid-lzma", "lzma 整体压缩（体积最小，推荐）"),
+            ("lzma", "lzma 逐文件压缩"),
+            ("zlib", "zlib（压缩最快，体积偏大）"),
+            ("bzip2", "bzip2"),
+        ])
+
+        box = self.section(parent, "代码签名（高级）")
+        self._sign_open = tk.BooleanVar(value=False)
+        ttk.Checkbutton(box, text=_("展开：打包后自动签名（Authenticode）"),
+                        variable=self._sign_open,
+                        command=self._toggle_sign).pack(anchor="w")
+        hint_label(box, "默认收起。需要给安装包做数字签名时再展开。")
+        self._sign_body = ttk.Frame(box)
+        self._sign_body.pack(fill="x")
+        self._toggle_sign()
+
+        body = self._sign_body
+        sign_on = self.check(body, "打包后自动签名（Authenticode）", build, "sign_enabled",
+                             hint="需要你自己有数字证书；不勾选就完全跳过。")
+        inner = ttk.Frame(body)
+        inner.pack(fill="x")
+        self.path(inner, "证书文件", build, "sign_cert", mode="file",
+                  patterns=[("证书文件", "*.pfx *.p12"), ("所有文件", "*.*")],
+                  hint=".pfx / .p12 数字证书文件")
+        self.text(inner, "证书密码", build, "sign_password",
+                  hint="会保存在工程文件里（明文），请自行妥善保管")
+        self.text(inner, "时间戳服务器", build, "sign_timestamp",
+                  hint="留空则不添加时间戳")
+        self.path(inner, "signtool 路径", build, "signtool", mode="file",
+                  hint="留空则自动查找（PATH / Windows SDK）")
+        self.gate(inner, lambda: bool(sign_on.get()), [sign_on])
+
+    def _toggle_sign(self) -> None:
+        if self._sign_open.get():
+            self._sign_body.pack(fill="x")
+        else:
+            self._sign_body.pack_forget()
 
     # -- 系统集成（高级，收起式）--------------------------------------------
 
@@ -165,6 +231,7 @@ class InstallPage(StepPage):
             view.heading(column, text=_(column))
             view.column(column, width=max(90, 470 // len(columns)), anchor="w")
         view.pack(fill="x")
+        keep_wheel_inside(view)         # 滚轮只滚列表，别把整页也带着滚
         row = ttk.Frame(box)
         row.pack(anchor="w", pady=(6, 0))
         ttk.Button(row, text=_("添加…"), width=8, command=on_add).pack(side="left")
@@ -238,3 +305,5 @@ class InstallPage(StepPage):
             install.default_dir = None
         else:
             install.default_dir = self.dir_var.get().strip() or None
+        modes = [key for key, var in self.mode_vars.items() if var.get()]
+        self.app.project.build.modes = modes or ["perMachine"]

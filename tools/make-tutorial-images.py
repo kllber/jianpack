@@ -447,16 +447,16 @@ def shot_shortcuts(win: MainWindow) -> None:
 
 
 def shot_build(win: MainWindow) -> None:
-    page = win._pages[4]
-    win._select_step(4)
+    """「开始打包」现在常驻左栏（不再是一个独立的步骤页）。"""
+    panel = win.build_panel
+    win._select_step(0)
     pump(win)
-    image, origin = content_image(win, page)
+    image, origin = grab(win)
     frame = Frame(image, origin, gutter=GUTTER)
-    frame.ring(rect_of(find(page, L(
-        "为所有用户安装（需要管理员权限，装到 Program Files）",
-        "For all users (admin rights, installs to Program Files)")), win), 1)
-    frame.ring(rect_of(find(page, L("开始打包", "Start Build")), win), 2)
-    frame.ring(rect_of(page.log, win), 3)
+    frame.ring(union(rect_of(panel.check_button, win),
+                     rect_of(panel.gen_button, win),
+                     rect_of(panel.build_button, win)), 1)
+    frame.ring(rect_of(panel.log, win), 2)
     frame.save("t09-build.png")
 
 

@@ -1,4 +1,8 @@
-﻿"""第 5 步：打包。"""
+"""左栏常驻的「开始打包」面板：动作按钮 + 实时日志。
+
+原来这一整块是独立的「第 5 步 打包」页；现在固定在左侧面板上，随时能点。
+打包相关的**设置**（版本 / 输出 / 压缩 / 签名）已经移到第 3 步「安装设置」。
+"""
 
 from __future__ import annotations
 
@@ -8,99 +12,67 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import messagebox, ttk
 
-from ...checks import check_project, split
-from ...core import demo
-from ...core.errors import PackError
-from ...engine import assets
-from ...engine.makensis import compile_nsi, find_makensis
-from ...engine.nsi import MODE_LABELS, NsiGenerator, output_file_name
-from .. import theme
-from ...i18n import t as _
-from ..splash import Splash
-from ..widgets import hint_label, section
-from .base import StepPage
+from ..checks import check_project, split
+from ..core import demo
+from ..core.errors import PackError
+from ..engine import assets
+from ..engine.makensis import compile_nsi, find_makensis
+from ..engine.nsi import MODE_LABELS, NsiGenerator, output_file_name
+from . import theme
+from ..i18n import t as _
+from .splash import Splash
+from .widgets import APP_FONT, TITLE_FONT
 
-MODE_TEXT = (
-    ("perMachine", "为所有用户安装（需要管理员权限，装到 Program Files）"),
-    ("perUser", "仅当前用户安装（免提权，装到 %LOCALAPPDATA%\\Programs）"),
-)
+WRAP = 500          # 左栏比较窄，提示文字按这个宽度换行
 
 
-class BuildPage(StepPage):
-    title = "打包"
-    description = "输出设置与编译"
-    subtitle = "校验配置、生成安装脚本、编译出安装包"
+class BuildPanel(ttk.Frame):
+    """「开始打包」：校验 / 只生成脚本 / 开始打包 / 打开输出目录 + 实时日志。"""
 
-    def build(self, parent: ttk.Frame) -> None:
-        self.window = None                 # 主窗口会填进来
+    def __init__(self, master, app) -> None:
+        super().__init__(master)
+        self.app = app
+        self.window = None                 # 主窗口会填进来（打包前先 flush 全部页面）
         self._busy = False
         self._queue: queue.Queue = queue.Queue()
         self._produced: list[Path] = []
-        self._pump_job = None              # 日志泵的 after 句柄（关窗口时要取消）
-        self._progress_window = None       # 打包进度提示窗口（Splash）
+        self._pump_job = None
+        self._progress_window = None
+        self._build()
+        self.app.subscribe(self._sync_enabled)
+        self._sync_enabled()
 
-        build = self.app.project.build
+    # -- 界面 ---------------------------------------------------------------
 
-        output = self.section(parent, "输出设置")
-        self.path(output, "输出位置", build, "output_dir", mode="dir", optional=True,
-                  hint="留空 = 输出到桌面；也可以填绝对路径（相对路径按工程文件所在目录算）")
-        self.text(output, "文件名", build, "file_name",
-                  hint="可以用 {appName} {appVersion}。勾选多个版本时会自动加 "
-                       "-PerMachine / -PerUser 后缀，避免互相覆盖。")
-        self.combo(output, "压缩方式", build, "compression", [
-            ("solid-lzma", "lzma 整体压缩（体积最小，推荐）"),
-            ("lzma", "lzma 逐文件压缩"),
-            ("zlib", "zlib（压缩最快，体积偏大）"),
-            ("bzip2", "bzip2"),
-        ])
+    def _build(self) -> None:
+        ttk.Label(self, text=_("开始打包"), font=TITLE_FONT,
+                  foreground=theme.c("accent")).pack(anchor="w", pady=(0, 6))
 
-        modes = self.section(parent, "要生成哪些版本")
-        self.mode_vars: dict[str, tk.BooleanVar] = {}
-        for key, text in MODE_TEXT:
-            var = tk.BooleanVar(value=key in build.modes)
-            ttk.Checkbutton(modes, text=_(text), variable=var).pack(anchor="w", pady=2)
-            var.trace_add("write", lambda *_: self.app.touch())
-            self.mode_vars[key] = var
-
-        sign = self.section(parent, "代码签名")
-        sign_on = self.check(sign, "打包后自动签名（Authenticode）", build, "sign_enabled",
-                             hint="需要你自己有数字证书；不勾选就完全跳过。")
-        sign_body = ttk.Frame(sign)
-        sign_body.pack(fill="x")
-        self.path(sign_body, "证书文件", build, "sign_cert", mode="file",
-                  patterns=[("证书文件", "*.pfx *.p12"), ("所有文件", "*.*")],
-                  hint=".pfx / .p12 数字证书文件")
-        self.text(sign_body, "证书密码", build, "sign_password",
-                  hint="会保存在工程文件里（明文），请自行妥善保管")
-        self.text(sign_body, "时间戳服务器", build, "sign_timestamp",
-                  hint="留空则不添加时间戳")
-        self.path(sign_body, "signtool 路径", build, "signtool", mode="file",
-                  hint="留空则自动查找（PATH / Windows SDK）")
-        self.gate(sign_body, lambda: bool(sign_on.get()), [sign_on])
-
-        actions = self.section(parent, "开始")
-        row = ttk.Frame(actions)
+        row = ttk.Frame(self)
         row.pack(fill="x")
-        self.check_button = ttk.Button(row, text=_("校验工程"), width=12,
+        self.check_button = ttk.Button(row, text=_("校验工程"), width=10,
                                        command=lambda: self.run("validate"))
         self.check_button.pack(side="left")
-        self.gen_button = ttk.Button(row, text=_("只生成脚本"), width=12,
+        self.gen_button = ttk.Button(row, text=_("只生成脚本"), width=11,
                                      command=lambda: self.run("generate"))
-        self.gen_button.pack(side="left", padx=(6, 0))
-        self.build_button = ttk.Button(row, text=_("开始打包"), width=12,
+        self.gen_button.pack(side="left", padx=(4, 0))
+        self.build_button = ttk.Button(row, text=_("开始打包"), width=10,
                                        command=lambda: self.run("build"))
-        self.build_button.pack(side="left", padx=(6, 0))
-        ttk.Button(row, text=_("打开输出目录"),
-                   command=self.open_output).pack(side="left", padx=(12, 0))
+        self.build_button.pack(side="left", padx=(4, 0))
+        ttk.Button(row, text=_("打开输出目录"), width=12,
+                   command=self.open_output).pack(side="left", padx=(4, 0))
 
-        hint_label(actions, "打包前会自动保存工程。首次打包如果没装 NSIS，"
-                            "程序会提示用 winget install NSIS.NSIS 安装。")
+        ttk.Label(self, foreground=theme.c("hint"), justify="left", wraplength=WRAP,
+                  font=("Microsoft YaHei UI", 8),
+                  text=_("打包前会自动保存工程。首次打包如果没装 NSIS，"
+                         "程序会提示用 winget install NSIS.NSIS 安装。")
+                  ).pack(anchor="w", pady=(4, 0))
 
-        log_section = self.section(parent, "日志")
-        holder = ttk.Frame(log_section)
+        ttk.Label(self, text=_("日志"), font=APP_FONT).pack(anchor="w", pady=(6, 2))
+        holder = ttk.Frame(self)
         holder.pack(fill="both", expand=True)
-        self.log = tk.Text(holder, height=15, wrap="none", state="disabled",
-                           font=("Consolas", 9), background=theme.c("log"),
+        self.log = tk.Text(holder, height=7, wrap="none", state="disabled",
+                           font=("Consolas", 8), background=theme.c("log"),
                            foreground=theme.c("text"), insertbackground=theme.c("text"),
                            relief="solid", borderwidth=1)
         scroll = ttk.Scrollbar(holder, orient="vertical", command=self.log.yview)
@@ -108,12 +80,13 @@ class BuildPage(StepPage):
         self.log.pack(side="left", fill="both", expand=True)
         scroll.pack(side="right", fill="y")
 
-    # -- 同步 ---------------------------------------------------------------
+    # -- 启用状态 -----------------------------------------------------------
 
-    def flush(self) -> None:
-        super().flush()
-        modes = [key for key, var in self.mode_vars.items() if var.get()]
-        self.app.project.build.modes = modes or ["perMachine"]
+    def _sync_enabled(self) -> None:
+        ready = (not self._busy) and self.app.project is not None
+        state = "!disabled" if ready else "disabled"
+        for button in (self.check_button, self.gen_button, self.build_button):
+            button.state([state])
 
     # -- 日志 ---------------------------------------------------------------
 
@@ -129,11 +102,9 @@ class BuildPage(StepPage):
         self.log.configure(state="disabled")
 
     def _post(self, text: str) -> None:
-        """工作线程里调用，把日志丢进队列。"""
         self._queue.put(("log", text))
 
     def _progress(self, done: int, total: int, status: str, file: str = "") -> None:
-        """工作线程里调用，更新打包进度窗（没有进度窗时会被忽略）。"""
         self._queue.put(("progress", done, total, status, file))
 
     def _pump(self) -> None:
@@ -157,14 +128,12 @@ class BuildPage(StepPage):
         else:
             self._pump_job = None
 
-    # -- 打包进度窗 ---------------------------------------------------------
+    # -- 进度窗 -------------------------------------------------------------
 
     def _open_progress(self, total: int) -> None:
         try:
             splash = Splash(self, with_icon=True, status=_("正在打包…"),
                             file_name=self.app.project.project_name)
-            # 编译进度拿不到逐文件百分比（makensis 不提供），所以用「来回滚动」的
-            # 进度条表示「正在干活」；具体编到第几个版本看上面的文字（1/2）。
             splash.set_indeterminate()
         except Exception as exc:  # noqa: BLE001 - 进度窗失败也不该影响打包
             self._append(_("（提示：打包进度窗创建失败，不影响打包）") + f" {exc!r}")
@@ -198,14 +167,14 @@ class BuildPage(StepPage):
 
     def _set_busy(self, busy: bool) -> None:
         self._busy = busy
-        state = "disabled" if busy else "!disabled"
-        for button in (self.check_button, self.gen_button, self.build_button):
-            button.state([state])
+        self._sync_enabled()
 
     # -- 主流程 -------------------------------------------------------------
 
     def run(self, action: str) -> None:
         if self._busy:
+            return
+        if self.app.project is None:
             return
         if self.window is not None:
             self.window.flush_all()
@@ -217,7 +186,6 @@ class BuildPage(StepPage):
         errors, warnings = split(problems)
 
         self._clear_log()
-        # 每行本身已经带了 [错误] / [警告] 前缀（Problem.__str__），别再叠一层
         for line in warnings:
             self._append(line)
         if warnings:
@@ -249,7 +217,6 @@ class BuildPage(StepPage):
             return
 
         if demo.is_demo(project.source_path):
-            # 演示项目不能保存，但允许直接拿当前配置测试打包效果
             self._append(_("（演示项目不会保存工程文件，只做本次测试。）"))
             self._append("")
         else:
@@ -311,7 +278,7 @@ class BuildPage(StepPage):
                 size_kb = expected.stat().st_size / 1024
                 self._post(f"  -> {expected}   ({size_kb:,.0f} KB)")
                 if project.build.sign_enabled:
-                    from ...engine.signing import sign_file
+                    from ..engine.signing import sign_file
 
                     self._post(_("正在签名（Authenticode）…"))
                     signed = sign_file(expected, project.build.sign_cert,
@@ -357,6 +324,8 @@ class BuildPage(StepPage):
         import os
 
         project = self.app.project
+        if project is None:
+            return
         out_dir = project.output_dir()
         if not out_dir.exists():
             messagebox.showinfo(_("目录还不存在"),

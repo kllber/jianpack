@@ -681,7 +681,7 @@ def test_preview(work: Path) -> None:
               content_w >= 950, f"编辑区约 {content_w}px（窗口 {total_w}px）")
 
         check("步骤列表是两列（名称 + 说明）",
-              len(window.step_list.get_children()) == 5
+              len(window.step_list.get_children()) == 4
               and window.step_list.item("0", "values")[1] != "",
               f"实际 {window.step_list.item('0', 'values')!r}")
 
@@ -1281,18 +1281,20 @@ def test_ime_function_key(work: Path) -> None:
     window.update()
 
     class _Event:
-        def __init__(self, char: str = "", send_event: bool = False) -> None:
+        def __init__(self, char: str = "", send_event: bool = False,
+                     keycode: int = 0) -> None:
             self.char = char
             self.send_event = send_event
+            self.keycode = keycode
 
     try:
         called: list[int] = []
-        handler = window._shortcut(lambda: called.append(1))
+        handler = window._shortcut(lambda: called.append(1), 112)   # 就当是 F1
         handler(_Event(char="p"))            # 打 p + 回车会被错报成 F1，char="p"
         handler(_Event(char="t"))            # 打 t + 回车会被错报成 F5，char="t"
-        handler(_Event(send_event=True))     # 选汉字确认时假事件 char 为空、send_event 为真
+        handler(_Event(keycode=80))          # 键码是字母 P，不是 F1
         check("输入法误报的假功能键不触发快捷键", called == [], str(called))
-        handler(_Event())                    # 真正的功能键：char 空、send_event 假
+        handler(_Event(keycode=112))         # 真正的功能键：char 空、键码对得上
         check("真实功能键事件正常触发", called == [1], str(called))
     finally:
         try:
@@ -1501,15 +1503,15 @@ def test_progress_windows(work: Path) -> None:
         check("小工程打开不弹加载窗（不闪一下）", shown == [], str(shown))
         check("加载完成后加载窗已清理", window._splash is None)
 
-        page = window._pages[-1]              # 第 5 步：打包
-        page._open_progress(2)
-        check("能创建打包进度窗", page._progress_window is not None)
+        panel = window.build_panel             # 左栏常驻的「开始打包」
+        panel._open_progress(2)
+        check("能创建打包进度窗", panel._progress_window is not None)
         check("打包进度条是来回滚动的（不会看起来卡住）",
-              page._progress_window is not None
-              and str(page._progress_window.bar.cget("mode")) == "indeterminate")
-        page._update_progress(1, 2, "正在打包…（1/2）", "Out.exe")
-        page._close_progress()
-        check("能关闭打包进度窗", page._progress_window is None)
+              panel._progress_window is not None
+              and str(panel._progress_window.bar.cget("mode")) == "indeterminate")
+        panel._update_progress(1, 2, "正在打包…（1/2）", "Out.exe")
+        panel._close_progress()
+        check("能关闭打包进度窗", panel._progress_window is None)
     finally:
         mw.Splash = orig_splash
         if window is not None:

@@ -73,3 +73,16 @@ def separator(parent, **pack) -> ttk.Separator:
     line = ttk.Separator(parent, orient="horizontal")
     line.pack(fill="x", pady=8, **pack)
     return line
+
+
+def keep_wheel_inside(widget) -> None:
+    """滚轮只滚这个控件自己，不把外层可滚动页面一起带着滚。
+
+    页面的滚动是绑在 ``bind_all`` 上的，所以这里要 ``return "break"``
+    把事件截断，否则鼠标放在列表上滚滚轮会连页面一起动。
+    """
+    def on_wheel(event):
+        widget.yview_scroll(int(-event.delta / 120), "units")
+        return "break"
+
+    widget.bind("<MouseWheel>", on_wheel)

@@ -234,7 +234,7 @@ class PreviewContext:
 def _preview_mode(project: Project) -> str:
     """预览按哪个模式画。
 
-    跟随第 5 步「要生成哪些版本」里勾选的第一个——这样预览和最终生成的安装包
+    跟随第 3 步「要生成哪些版本」里勾选的第一个——这样预览和最终生成的安装包
     永远一致；没勾选任何版本时才退回工程里的默认值。
     """
     for mode in project.build.modes:
@@ -840,8 +840,6 @@ class PreviewPanel(ttk.Frame):
             key = "appinfo"
         elif step == 3:
             key = SUBTAB_TO_PAGE.get(subtab)
-        elif step == 4:
-            key = "finish"
         if key and key != self._page:
             self._page = key
             return True
