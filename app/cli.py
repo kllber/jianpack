@@ -139,6 +139,18 @@ def cmd_build(args: argparse.Namespace) -> int:
                 return 1
             size_kb = expected.stat().st_size / 1024
             print(f"  -> {expected}  ({size_kb:,.0f} KB)")
+            if project.build.sign_enabled:
+                from .engine.signing import sign_file
+
+                print("  正在签名（Authenticode）…")
+                signed = sign_file(expected, project.build.sign_cert,
+                                   project.build.sign_password,
+                                   project.build.sign_timestamp,
+                                   project.build.signtool)
+                for line in signed.output.rstrip().splitlines():
+                    print("    " + line)
+                print("  签名完成。" if signed.ok
+                      else "  签名失败（安装包已生成，但没有签名）。")
             produced.append(expected)
 
         print("\n打包完成：")

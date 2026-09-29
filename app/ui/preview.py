@@ -617,6 +617,23 @@ def _paint_finish(canvas, draw, ctx: PreviewContext) -> None:
 APPINFO_W, APPINFO_H = 503, 440
 
 
+def _version_language_label(project: Project) -> str:
+    """程序属性里「语言」那一行显示什么。
+
+    NSIS 总会带一个默认块（英语 - 美国）；我们再按所选语言额外写一个块。
+    """
+    from ..engine.nsi import version_lang_id
+
+    names: list[str] = []
+    lang_id = version_lang_id(project.interface.language)
+    if lang_id == "2052":
+        names.append(_("简体中文(中国大陆)"))
+    elif lang_id == "1028":
+        names.append(_("中文(繁體，台灣)"))
+    names.append(_("英语(美国)"))
+    return ", ".join(names)
+
+
 def _render_appinfo(project: Project) -> Image.Image:
     """按 Windows「属性 → 详细信息」的样子画一张仿真图。
 
@@ -645,7 +662,7 @@ def _render_appinfo(project: Project) -> Image.Image:
         (_("版权"), app.copyright or _("（留空）")),
         (_("大小"), "123 KB"),
         (_("修改日期"), now),
-        (_("语言"), _("简体中文(中国大陆), 英语(美国)")),
+        (_("语言"), _version_language_label(project)),
         (_("原始文件名"), filename),
     ]
 

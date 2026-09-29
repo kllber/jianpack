@@ -69,6 +69,20 @@ def placeholder_table(project: Project, mode: str) -> dict[str, str]:
     }
 
 
+def version_lang_id(code: str) -> str | None:
+    """程序属性「语言」对应的 NSIS LANG 号。
+
+    英语（或无法识别）返回 ``None`` —— 这时不额外写 /LANG，只保留 NSIS 自带的
+    默认块（英语 - 美国），属性里就只显示「英语(美国)」。
+    """
+    value = (code or "").lower()
+    if value.startswith("zh"):
+        if "tw" in value or "hk" in value or "hant" in value:
+            return "1028"                     # 中文（繁體，台灣）
+        return "2052"                         # 简体中文（中国大陆）
+    return None
+
+
 class NsiGenerator:
     def __init__(self, project: Project, mode: str, build_dir: Path) -> None:
         if mode not in MODE_LABELS:
@@ -265,7 +279,7 @@ class NsiGenerator:
         self.blank()
 
         self.add(f'VIProductVersion "{self.r(app.file_version, "app.fileVersion")}"')
-        lang = "2052" if interface.language.lower().startswith("zh") else None
+        lang = version_lang_id(interface.language)
         keys = [
             ("ProductName", app.name, "app.name"),
             ("FileDescription", app.description, "app.description"),
@@ -582,6 +596,90 @@ class NsiGenerator:
             self._emit_shortcut_section()
         self.blank()
 
+        self._emit_integration_section()
+
+    def _emit_integration_section(self) -> None:
+        """文件关联 / URL 协议 / 注册表 / 开机自启（安装时写入）。"""
+        itg = self.p.integration
+        if not (itg.associations or itg.protocols or itg.registry or itg.autostart):
+            return
+
+        app_exe = "$INSTDIR\\${APP_EXE}"
+        run_key = "Software\\Microsoft\\Windows\\CurrentVersion\\Run"
+
+        self.add('Section "系统集成" SecIntegration')
+        self.add("  SectionIn RO")
+        self.blank()
+
+        for entry in itg.associations:
+            ext = entry.ext.strip()
+            if not ext:
+                continue
+            if not ext.startswith("."):
+                ext = "." + ext
+            prog = "${APP_REGKEY}" + ext
+            desc = self.r(entry.description or self.p.app.name, "integration.associations[].description")
+            icon = entry.icon.strip()
+            icon_path = (f"$INSTDIR\\{self.r(icon, 'integration.associations[].icon')}"
+                         if icon else app_exe)
+            self.comment("  文件关联 " + ext)
+            self.add(f'  WriteRegStr ${{REG_HIVE}} "Software\\Classes\\{prog}" "" "{desc}"')
+            self.add(f'  WriteRegStr ${{REG_HIVE}} "Software\\Classes\\{prog}\\DefaultIcon" '
+                     f'"" "{icon_path},0"')
+            self.add(f'  WriteRegStr ${{REG_HIVE}} "Software\\Classes\\{prog}\\shell\\open\\command" '
+                     f'"" "$\\"{app_exe}$\\" $\\"%1$\\""')
+            self.add(f'  WriteRegStr ${{REG_HIVE}} "Software\\Classes\\{ext}\\OpenWithProgids" '
+                     f'"{prog}" ""')
+            if entry.is_default:
+                self.add(f'  WriteRegStr ${{REG_HIVE}} "Software\\Classes\\{ext}" "" "{prog}"')
+            self.blank()
+
+        for entry in itg.protocols:
+            scheme = entry.scheme.strip()
+            if not scheme:
+                continue
+            desc = self.r(entry.description or self.p.app.name, "integration.protocols[].description")
+            self.comment("  URL 协议 " + scheme)
+            self.add(f'  WriteRegStr ${{REG_HIVE}} "Software\\Classes\\{scheme}" "" '
+                     f'"URL:{scheme} Protocol"')
+            self.add(f'  WriteRegStr ${{REG_HIVE}} "Software\\Classes\\{scheme}" "URL Protocol" ""')
+            self.add(f'  WriteRegStr ${{REG_HIVE}} "Software\\Classes\\{scheme}\\DefaultIcon" '
+                     f'"" "{app_exe},0"')
+            self.add(f'  WriteRegStr ${{REG_HIVE}} "Software\\Classes\\{scheme}\\shell\\open\\command" '
+                     f'"" "$\\"{app_exe}$\\" $\\"%1$\\""')
+            self.blank()
+
+        for entry in itg.registry:
+            path = entry.path.strip().strip("\\")
+            if not path:
+                continue
+            hive = "HKCU" if entry.root == "HKCU" else "HKLM"
+            name = self.r(entry.name.strip(), "integration.registry[].name")
+            self.comment("  注册表 " + entry.root + "\\" + path)
+            if entry.type == "REG_DWORD":
+                try:
+                    number = int(str(entry.data).strip() or "0", 0)
+                except ValueError:
+                    number = 0
+                self.add(f'  WriteRegDWORD {hive} "{path}" "{name}" {number}')
+            else:
+                command = ("WriteRegExpandStr" if entry.type == "REG_EXPAND_SZ"
+                           else "WriteRegStr")
+                data = self.r(entry.data, "integration.registry[].data")
+                if name:
+                    self.add(f'  {command} {hive} "{path}" "{name}" "{data}"')
+                else:
+                    self.add(f'  {command} {hive} "{path}" "" "{data}"')
+            self.blank()
+
+        if itg.autostart:
+            self.comment("  开机自启")
+            self.add(f'  WriteRegStr ${{REG_HIVE}} "{run_key}" "${{APP_NAME}}" '
+                     f'"$\\"{app_exe}$\\""')
+            self.blank()
+
+        self.add("SectionEnd")
+
     def _emit_payload(self) -> None:
         """输出打包内容的复制指令。
 
@@ -675,6 +773,39 @@ class NsiGenerator:
 
         self.add("SectionEnd")
 
+    def _emit_integration_uninstall(self) -> None:
+        """把安装时写进去的「系统集成」在卸载时清理干净。"""
+        itg = self.p.integration
+        for entry in itg.associations:
+            ext = entry.ext.strip()
+            if not ext:
+                continue
+            if not ext.startswith("."):
+                ext = "." + ext
+            prog = "${APP_REGKEY}" + ext
+            self.add(f'  DeleteRegKey ${{REG_HIVE}} "Software\\Classes\\{prog}"')
+            self.add(f'  DeleteRegValue ${{REG_HIVE}} '
+                     f'"Software\\Classes\\{ext}\\OpenWithProgids" "{prog}"')
+            if entry.is_default:
+                self.add(f'  DeleteRegValue ${{REG_HIVE}} "Software\\Classes\\{ext}" ""')
+        for entry in itg.protocols:
+            scheme = entry.scheme.strip()
+            if scheme:
+                self.add(f'  DeleteRegKey ${{REG_HIVE}} "Software\\Classes\\{scheme}"')
+        for entry in itg.registry:
+            path = entry.path.strip().strip("\\")
+            if not path:
+                continue
+            hive = "HKCU" if entry.root == "HKCU" else "HKLM"
+            name = entry.name.strip()
+            if name:
+                self.add(f'  DeleteRegValue {hive} "{path}" "{name}"')
+            else:
+                self.add(f'  DeleteRegKey {hive} "{path}"')
+        if itg.autostart:
+            self.add('  DeleteRegValue ${REG_HIVE} '
+                     '"Software\\Microsoft\\Windows\\CurrentVersion\\Run" "${APP_NAME}"')
+
     def _emit_uninstall(self) -> None:
         desktop = self.p.shortcuts.desktop
         start_menu = self.p.shortcuts.start_menu
@@ -726,7 +857,8 @@ class NsiGenerator:
             name = self.r(desktop.name, "shortcuts.desktop.name")
             self.out.append(f'  Delete "$DESKTOP\\{name}.lnk"')
         self.blank()
-
+        self.add("  ; 系统集成")
+        self._emit_integration_uninstall()
         self.add("  ; 程序文件")
         self.add('  RMDir /r "$INSTDIR"')
         self.blank()

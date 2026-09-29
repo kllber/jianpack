@@ -645,6 +645,16 @@ def test_preview(work: Path) -> None:
     check("换一个版本预览路径也跟着变",
           "Program Files" in preview._sample_dir(project), preview._sample_dir(project))
 
+    # 程序属性的「语言」要跟着第 1 步的设置走
+    project.interface.language = "zh-CN"
+    zh_label = preview._version_language_label(project)
+    project.interface.language = "en-US"
+    en_label = preview._version_language_label(project)
+    check("程序属性语言跟随设置（中/英）",
+          "简体" in zh_label and "英语" in zh_label and "简体" not in en_label,
+          f"{zh_label!r} / {en_label!r}")
+    project.interface.language = "zh-CN"
+
     # --- 面板装进主窗口后，编辑区不能被挤坏
     window = MainWindow(str(work / DEMO.name))
     wait_loaded(window)
@@ -813,6 +823,39 @@ def test_container(work: Path) -> None:
               f"实际 {payload[:1]}")
     finally:
         again.cleanup()
+
+    # 系统集成 / 代码签名：存进去再读出来要一致
+    from app.core.project import AssocEntry, ProtocolEntry, RegEntry
+
+    rich = load_project(work / DEMO.name)
+    rich.integration.associations = [
+        AssocEntry(ext=".t", description="d", icon="", is_default=False)]
+    rich.integration.protocols = [ProtocolEntry(scheme="t", description="dd")]
+    rich.integration.registry = [
+        RegEntry(root="HKLM", path="Software\\T", name="n", type="REG_DWORD", data="7")]
+    rich.integration.autostart = True
+    rich.build.sign_enabled = True
+    rich.build.sign_cert = "a.pfx"
+    rich.build.sign_password = "pw"
+    rich_path = work / "集成.jianpack"
+    save_project(rich, rich_path, container_mode=True)
+    rich.cleanup()
+
+    rich2 = load_project(rich_path)
+    try:
+        check("系统集成 / 签名 字段能存取一致",
+              rich2.integration.associations[0].ext == ".t"
+              and rich2.integration.associations[0].is_default is False
+              and rich2.integration.protocols[0].scheme == "t"
+              and rich2.integration.registry[0].root == "HKLM"
+              and rich2.integration.registry[0].type == "REG_DWORD"
+              and rich2.integration.registry[0].data == "7"
+              and rich2.integration.autostart is True
+              and rich2.build.sign_enabled is True
+              and rich2.build.sign_cert == "a.pfx"
+              and rich2.build.sign_password == "pw")
+    finally:
+        rich2.cleanup()
 
     # 输出位置：留空 = 桌面；填了就用填的
     fresh = Project(source_path=work / "x.jianpack", base_dir=work)

@@ -47,6 +47,9 @@ redistribution and commercial use).
 | **Install settings** | Default/custom install path, allow the user to change it, remember last location, show disk usage; user-data directory; whether to ask about keeping user data on uninstall |
 | **Installer UI** | Text and images per page (Welcome / License / Changelog / Install location / Install options / Finish + header image); License and Changelog support "edit inline" or "import from txt"; **the Install options page also holds the desktop / Start Menu shortcut settings**; **unchecking a parent greys out its children** |
 | **Build** | Output location (Desktop by default), file-name template, compression, multiple variants (all users / current user, can be produced together); **build progress window**; live log |
+| **Code signing** | After building, signs the installer with `signtool` (Authenticode); bring your own certificate, leave empty to skip |
+| **System integration** | Advanced drawer in step 3: **file associations / URL protocols / custom registry entries / run at startup**; written on install, cleaned on uninstall |
+| **App Properties language** | Step 1 lets you choose the installer exe's "Language" property (Simplified Chinese / Traditional Chinese / English) |
 | **Live preview** | Covers the 7 installer pages plus an **App Properties** preview, follows the edited content and the **variant selected in step 5** automatically; toggle with `Ctrl+P` |
 | **Images** | Drop any-format image for icon / header image / welcome image → crop dialog (drag/zoom) → auto-orient, alpha flattened onto white, exported as BMP / multi-size ICO |
 | **Loading feedback** | A **loading window** when opening a project: double-click `.jianpack` / app start uses the icon version, opening from inside the app uses a simplified icon-less version; **it is skipped when reading is fast**, shown otherwise with **real extraction progress** |

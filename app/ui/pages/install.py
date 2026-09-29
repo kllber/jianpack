@@ -5,9 +5,34 @@ from __future__ import annotations
 import tkinter as tk
 from tkinter import ttk
 
+from ...core.project import AssocEntry, ProtocolEntry, RegEntry
 from ...i18n import t as _
+from ..integration_dialog import EntryDialog
 from ..widgets import hint_label, section
 from .base import StepPage
+
+ASSOC_FIELDS = [
+    {"key": "ext", "label": "扩展名", "hint": "例如 .myext（带不带点都行）"},
+    {"key": "description", "label": "描述", "hint": "显示在「打开方式」里"},
+    {"key": "icon", "label": "图标", "hint": "安装目录内的相对路径；留空用主程序图标"},
+    {"key": "is_default", "label": "设为默认打开方式", "kind": "check"},
+]
+PROTO_FIELDS = [
+    {"key": "scheme", "label": "协议名", "hint": "例如 myapp（对应 myapp://…）"},
+    {"key": "description", "label": "描述"},
+]
+REG_FIELDS = [
+    {"key": "root", "label": "根键", "kind": "combo", "default": "HKCU", "options": [
+        ("HKCU", "HKCU（当前用户）"),
+        ("HKLM", "HKLM（所有用户，需要管理员）")]},
+    {"key": "path", "label": "路径", "hint": "例如 Software\\MyApp"},
+    {"key": "name", "label": "值名", "hint": "留空 = 该键的默认值"},
+    {"key": "type", "label": "类型", "kind": "combo", "default": "REG_SZ", "options": [
+        ("REG_SZ", "字符串 REG_SZ"),
+        ("REG_EXPAND_SZ", "可展开字符串 REG_EXPAND_SZ"),
+        ("REG_DWORD", "32 位数字 REG_DWORD")]},
+    {"key": "data", "label": "数据"},
+]
 
 
 class InstallPage(StepPage):
@@ -78,7 +103,133 @@ class InstallPage(StepPage):
                   [path_var, ask_var])
         self.gate(silent_row, has_data, [path_var])
 
+        self._integration_block(parent)
         self._sync_dir_state()
+
+    # -- 系统集成（高级，收起式）--------------------------------------------
+
+    def _integration_block(self, parent: ttk.Frame) -> None:
+        box = self.section(parent, "系统集成（高级）")
+        self._drawer_open = tk.BooleanVar(value=False)
+        ttk.Checkbutton(box, text=_("展开：文件关联 / URL 协议 / 注册表 / 开机自启"),
+                        variable=self._drawer_open,
+                        command=self._toggle_drawer).pack(anchor="w")
+        hint_label(box, "默认收起。只有需要让安装包替你做这些系统集成时才展开。")
+
+        self._drawer = ttk.Frame(box)
+        self._drawer.pack(fill="x")
+        self._toggle_drawer()
+
+        integration = self.app.project.integration
+        self._assoc_view = self._make_list(
+            self._drawer, "文件关联", ("扩展名", "描述", "默认"),
+            on_add=lambda: self._add_entry(
+                _("添加文件关联"), ASSOC_FIELDS, integration.associations, AssocEntry),
+            on_edit=lambda: self._edit_entry(
+                self._assoc_view, _("编辑文件关联"), ASSOC_FIELDS,
+                integration.associations, AssocEntry),
+            on_del=lambda: self._del_entry(self._assoc_view, integration.associations))
+        self._proto_view = self._make_list(
+            self._drawer, "URL 协议", ("协议", "描述"),
+            on_add=lambda: self._add_entry(
+                _("添加 URL 协议"), PROTO_FIELDS, integration.protocols, ProtocolEntry),
+            on_edit=lambda: self._edit_entry(
+                self._proto_view, _("编辑 URL 协议"), PROTO_FIELDS,
+                integration.protocols, ProtocolEntry),
+            on_del=lambda: self._del_entry(self._proto_view, integration.protocols))
+        self._reg_view = self._make_list(
+            self._drawer, "注册表", ("根", "路径", "名称", "类型", "数据"),
+            on_add=lambda: self._add_entry(
+                _("添加注册表项"), REG_FIELDS, integration.registry, RegEntry),
+            on_edit=lambda: self._edit_entry(
+                self._reg_view, _("编辑注册表项"), REG_FIELDS,
+                integration.registry, RegEntry),
+            on_del=lambda: self._del_entry(self._reg_view, integration.registry))
+
+        auto = ttk.LabelFrame(self._drawer, text=" " + _("开机自启") + " ",
+                              padding=(12, 8, 12, 10))
+        auto.pack(fill="x", pady=(8, 0))
+        self.check(auto, "开机时自动启动本程序", integration, "autostart")
+
+        self._enter_actions.append(self._refresh_integration)
+        self._refresh_integration()
+
+    def _toggle_drawer(self) -> None:
+        if self._drawer_open.get():
+            self._drawer.pack(fill="x")
+        else:
+            self._drawer.pack_forget()
+
+    def _make_list(self, parent, title: str, columns: tuple[str, ...],
+                   on_add, on_edit, on_del) -> ttk.Treeview:
+        box = ttk.LabelFrame(parent, text=" " + _(title) + " ", padding=(10, 6, 10, 8))
+        box.pack(fill="x", pady=(8, 0))
+        view = ttk.Treeview(box, columns=columns, show="headings", height=3,
+                            selectmode="browse")
+        for column in columns:
+            view.heading(column, text=_(column))
+            view.column(column, width=max(90, 470 // len(columns)), anchor="w")
+        view.pack(fill="x")
+        row = ttk.Frame(box)
+        row.pack(anchor="w", pady=(6, 0))
+        ttk.Button(row, text=_("添加…"), width=8, command=on_add).pack(side="left")
+        ttk.Button(row, text=_("编辑…"), width=8,
+                   command=on_edit).pack(side="left", padx=(6, 0))
+        ttk.Button(row, text=_("删除"), width=8,
+                   command=on_del).pack(side="left", padx=(6, 0))
+        return view
+
+    @staticmethod
+    def _selected_index(view: ttk.Treeview) -> int | None:
+        selection = view.selection()
+        return int(selection[0]) if selection else None
+
+    def _add_entry(self, title: str, fields: list[dict], entries: list, make) -> None:
+        dialog = EntryDialog(self.winfo_toplevel(), title, fields)
+        if dialog.result is None:
+            return
+        entries.append(make(**dialog.result))
+        self.app.touch()
+        self._refresh_integration()
+
+    def _edit_entry(self, view, title: str, fields: list[dict],
+                    entries: list, make) -> None:
+        index = self._selected_index(view)
+        if index is None:
+            return
+        current = entries[index]
+        values = {f["key"]: getattr(current, f["key"], "") for f in fields}
+        dialog = EntryDialog(self.winfo_toplevel(), title, fields, values)
+        if dialog.result is None:
+            return
+        entries[index] = make(**dialog.result)
+        self.app.touch()
+        self._refresh_integration()
+
+    def _del_entry(self, view, entries: list) -> None:
+        index = self._selected_index(view)
+        if index is None:
+            return
+        del entries[index]
+        self.app.touch()
+        self._refresh_integration()
+
+    def _refresh_integration(self) -> None:
+        integration = self.app.project.integration
+        self._assoc_view.delete(*self._assoc_view.get_children())
+        for index, item in enumerate(integration.associations):
+            self._assoc_view.insert(
+                "", "end", iid=str(index),
+                values=(item.ext, item.description, _("是") if item.is_default else _("否")))
+        self._proto_view.delete(*self._proto_view.get_children())
+        for index, item in enumerate(integration.protocols):
+            self._proto_view.insert("", "end", iid=str(index),
+                                    values=(item.scheme, item.description))
+        self._reg_view.delete(*self._reg_view.get_children())
+        for index, item in enumerate(integration.registry):
+            self._reg_view.insert("", "end", iid=str(index),
+                                  values=(item.root, item.path, item.name,
+                                          item.type, item.data))
 
     # -- 同步 ---------------------------------------------------------------
 

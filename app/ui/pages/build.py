@@ -62,6 +62,22 @@ class BuildPage(StepPage):
             var.trace_add("write", lambda *_: self.app.touch())
             self.mode_vars[key] = var
 
+        sign = self.section(parent, "代码签名")
+        sign_on = self.check(sign, "打包后自动签名（Authenticode）", build, "sign_enabled",
+                             hint="需要你自己有数字证书；不勾选就完全跳过。")
+        sign_body = ttk.Frame(sign)
+        sign_body.pack(fill="x")
+        self.path(sign_body, "证书文件", build, "sign_cert", mode="file",
+                  patterns=[("证书文件", "*.pfx *.p12"), ("所有文件", "*.*")],
+                  hint=".pfx / .p12 数字证书文件")
+        self.text(sign_body, "证书密码", build, "sign_password",
+                  hint="会保存在工程文件里（明文），请自行妥善保管")
+        self.text(sign_body, "时间戳服务器", build, "sign_timestamp",
+                  hint="留空则不添加时间戳")
+        self.path(sign_body, "signtool 路径", build, "signtool", mode="file",
+                  hint="留空则自动查找（PATH / Windows SDK）")
+        self.gate(sign_body, lambda: bool(sign_on.get()), [sign_on])
+
         actions = self.section(parent, "开始")
         row = ttk.Frame(actions)
         row.pack(fill="x")
@@ -294,6 +310,18 @@ class BuildPage(StepPage):
                     return
                 size_kb = expected.stat().st_size / 1024
                 self._post(f"  -> {expected}   ({size_kb:,.0f} KB)")
+                if project.build.sign_enabled:
+                    from ...engine.signing import sign_file
+
+                    self._post(_("正在签名（Authenticode）…"))
+                    signed = sign_file(expected, project.build.sign_cert,
+                                       project.build.sign_password,
+                                       project.build.sign_timestamp,
+                                       project.build.signtool)
+                    for line in signed.output.rstrip().splitlines():
+                        self._post("  " + line)
+                    self._post(_("签名完成。") if signed.ok
+                               else _("签名失败（安装包已生成，但没有签名）。"))
                 self._produced.append(expected)
                 self._progress(index, total, status_of(mode, index), expected.name)
 

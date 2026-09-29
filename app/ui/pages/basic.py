@@ -41,6 +41,13 @@ class BasicPage(StepPage):
         self.text(info, "一句话描述", app, "description",
                   hint="显示在程序属性里")
 
+        prop = self.section(parent, "程序属性")
+        self.combo(prop, "语言", self.app.project.interface, "language", [
+            ("zh-CN", "简体中文（中国大陆）"),
+            ("zh-TW", "中文（繁體，台灣）"),
+            ("en-US", "English（美国）"),
+        ], hint="安装包 exe 属性里「语言」显示的内容；不影响安装向导的界面语言。")
+
         assets = self.section(parent, "图标")
         self.image_field(assets, "程序图标", app, "icon", "icon",
                          hint="会用在安装包、桌面快捷方式、开始菜单和「程序和功能」列表里。")

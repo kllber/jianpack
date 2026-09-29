@@ -470,6 +470,12 @@ class BuildSection:
     file_name: str = "{appName}-{appVersion}-Setup.exe"
     compression: str = "solid-lzma"
     modes: list[str] = field(default_factory=lambda: ["perMachine"])
+    # 代码签名（Authenticode）：不勾选 / 没填证书 = 不签名
+    sign_enabled: bool = False
+    sign_cert: str = ""                        # .pfx / .p12
+    sign_password: str = ""
+    sign_timestamp: str = "http://timestamp.digicert.com"
+    signtool: str = ""                         # 空 = 自动查找
 
     @classmethod
     def from_dict(cls, d: dict, where: str) -> "BuildSection":
@@ -488,6 +494,97 @@ class BuildSection:
             file_name=_s(d, "fileName", where, "{appName}-{appVersion}-Setup.exe"),
             compression=compression,
             modes=modes,
+            sign_enabled=_b(d, "signEnabled", where, False),
+            sign_cert=_s(d, "signCert", where, ""),
+            sign_password=_s(d, "signPassword", where, ""),
+            sign_timestamp=_s(d, "signTimestamp", where,
+                              "http://timestamp.digicert.com"),
+            signtool=_s(d, "signtool", where, ""),
+        )
+
+
+@dataclass
+class AssocEntry:
+    """一个文件类型关联（扩展名 -> 本程序）。"""
+
+    ext: str = ""              # 例 ".myext"（带不带点都行）
+    description: str = ""
+    icon: str = ""             # 空 = 用主程序图标
+    is_default: bool = True    # 尝试设为默认（只对自定义扩展名有意义）
+
+    @classmethod
+    def from_dict(cls, d: dict, where: str) -> "AssocEntry":
+        return cls(
+            ext=_s(d, "ext", where),
+            description=_s(d, "description", where),
+            icon=_s(d, "icon", where),
+            is_default=_b(d, "isDefault", where, True),
+        )
+
+
+@dataclass
+class ProtocolEntry:
+    """一个 URL 协议（例 myapp://…）。"""
+
+    scheme: str = ""           # 例 "myapp"
+    description: str = ""
+
+    @classmethod
+    def from_dict(cls, d: dict, where: str) -> "ProtocolEntry":
+        return cls(scheme=_s(d, "scheme", where), description=_s(d, "description", where))
+
+
+@dataclass
+class RegEntry:
+    """一条自定义注册表项（安装时写入，卸载时删除）。"""
+
+    root: str = "HKCU"         # HKCU | HKLM
+    path: str = ""             # 例 Software\MyApp
+    name: str = ""             # 空 = 该键的默认值
+    type: str = "REG_SZ"       # REG_SZ | REG_EXPAND_SZ | REG_DWORD
+    data: str = ""
+
+    @classmethod
+    def from_dict(cls, d: dict, where: str) -> "RegEntry":
+        root = _s(d, "root", where, "HKCU")
+        if root not in ("HKCU", "HKLM"):
+            raise ProjectFileError(
+                _('{where}.root: 只能是 "HKCU" 或 "HKLM"').format(where=where))
+        kind = _s(d, "type", where, "REG_SZ")
+        if kind not in ("REG_SZ", "REG_EXPAND_SZ", "REG_DWORD"):
+            raise ProjectFileError(
+                _("{where}.type: 只能是 REG_SZ / REG_EXPAND_SZ / REG_DWORD")
+                .format(where=where))
+        return cls(root=root, path=_s(d, "path", where), name=_s(d, "name", where),
+                   type=kind, data=_s(d, "data", where))
+
+
+@dataclass
+class IntegrationSection:
+    """安装时对系统做的「集成」：文件关联 / URL 协议 / 注册表 / 开机自启。"""
+
+    associations: list[AssocEntry] = field(default_factory=list)
+    protocols: list[ProtocolEntry] = field(default_factory=list)
+    registry: list[RegEntry] = field(default_factory=list)
+    autostart: bool = False
+
+    @classmethod
+    def from_dict(cls, d: dict, where: str) -> "IntegrationSection":
+        def items(key: str, kind, cast):
+            raw = d.get(key)
+            if raw is None:
+                return []
+            if not isinstance(raw, list):
+                raise ProjectFileError(
+                    _("{where}.{key}: 期望数组").format(where=where, key=key))
+            return [cast(_obj(x, f"{where}.{key}[{i}]"), f"{where}.{key}[{i}]")
+                    for i, x in enumerate(raw)]
+
+        return cls(
+            associations=items("associations", AssocEntry, AssocEntry.from_dict),
+            protocols=items("protocols", ProtocolEntry, ProtocolEntry.from_dict),
+            registry=items("registry", RegEntry, RegEntry.from_dict),
+            autostart=_b(d, "autostart", where, False),
         )
 
 
@@ -511,6 +608,7 @@ class Project:
     shortcuts: ShortcutsSection = field(default_factory=ShortcutsSection)
     uninstall: UninstallSection = field(default_factory=UninstallSection)
     build: BuildSection = field(default_factory=BuildSection)
+    integration: IntegrationSection = field(default_factory=IntegrationSection)
     # 单文件工程（zip 容器）：保存在 source_path；运行时文件在 base_dir。
     is_container: bool = False
     work_dir: Path | None = None           # 本软件独占的临时目录，关闭时要删
@@ -814,6 +912,9 @@ class Project:
         if not self.install.allow_change_dir and not self.install.default_dir:
             add(warning("install.allowChangeDir",
                         _("关闭了「安装位置」页，但 defaultDir 留空仍会按模式自动选择路径")))
+        if self.build.sign_enabled and not self.build.sign_cert:
+            add(error("build.signCert",
+                      _("勾选了「打包后自动签名」，但没有选择证书文件（.pfx / .p12）")))
 
         for where, value in self._outside_references():
             add(warning(where, _("引用了工程目录之外的位置（{value}），"
@@ -954,6 +1055,8 @@ def load_project(path: str | Path, progress=None) -> Project:
             shortcuts=ShortcutsSection.from_dict(_obj(data.get("shortcuts"), "shortcuts"), "shortcuts"),
             uninstall=UninstallSection.from_dict(_obj(data.get("uninstall"), "uninstall"), "uninstall"),
             build=BuildSection.from_dict(_obj(data.get("build"), "build"), "build"),
+            integration=IntegrationSection.from_dict(
+                _obj(data.get("integration"), "integration"), "integration"),
             is_container=kind == "container",
             work_dir=work_dir,
         )

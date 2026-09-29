@@ -39,6 +39,7 @@ def project_to_dict(project: Project) -> dict:
     shortcuts = project.shortcuts
     uninstall = project.uninstall
     build = project.build
+    integration = project.integration
 
     return {
         "formatVersion": FORMAT_VERSION,
@@ -165,6 +166,28 @@ def project_to_dict(project: Project) -> dict:
             "fileName": build.file_name,
             "compression": build.compression,
             "modes": list(build.modes),
+            "signEnabled": build.sign_enabled,
+            "signCert": build.sign_cert,
+            "signPassword": build.sign_password,
+            "signTimestamp": build.sign_timestamp,
+            "signtool": build.signtool,
+        },
+        "integration": {
+            "associations": [
+                {"ext": a.ext, "description": a.description, "icon": a.icon,
+                 "isDefault": a.is_default}
+                for a in integration.associations
+            ],
+            "protocols": [
+                {"scheme": p.scheme, "description": p.description}
+                for p in integration.protocols
+            ],
+            "registry": [
+                {"root": r.root, "path": r.path, "name": r.name,
+                 "type": r.type, "data": r.data}
+                for r in integration.registry
+            ],
+            "autostart": integration.autostart,
         },
     }
 
