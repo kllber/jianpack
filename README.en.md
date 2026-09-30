@@ -58,7 +58,7 @@ the "good enough and easy to pick up" route:
 - **Bilingual** — both the GUI and the built-in tutorial ship in Chinese and English;
 - **Portable & dependency-free** — the app is one folder with a bundled portable NSIS; copy it to another PC and nothing needs installing;
 - **Single-file project** — icon, program files, UI settings and version history all live in one `.jianpack`;
-- **Versioning** — keep several versions in one project and switch with one click (rare among peers);
+- **Versioning** — keep several versions in one project and switch with one click (rare among peers); only the current version is loaded when you open it, so switching is instant;
 - **What you see is what you get** — a live preview on the left; drop any image format and it is auto-cropped to spec.
 
 To be honest about where it **falls short** today: no script-level customization, no
@@ -85,7 +85,7 @@ fixed. If you need those, Inno Setup Compiler will fit better.
 
 ## 4. Features at a glance
 
-- **Project & versions**: single-file `.jianpack`; version iterate / switch (only the last 2 versions keep their program files, older ones are auto-"retired"); double-click a project file to open it.
+- **Project & versions**: single-file `.jianpack`; version iterate / switch (only the last 2 versions keep their program files, older ones are auto-"retired"; opening loads just the current version, so switching is instant); double-click a project file to open it.
 - **Install settings**: default / custom install path, allow the user to change it, remember last location; user data & uninstall prompt; both install modes can be generated at once; silent install/uninstall `/S`.
 - **Installer UI**: text and images for Welcome / License / Changelog / Location / Options / Finish; License & Changelog edited inline or imported from txt; header and welcome images; an **auto-start** checkbox on the Finish page.
 - **System integration & signing**: file associations, URL protocols, custom registry entries (written on install, cleaned on uninstall); automatic code signing (Authenticode, bring your own certificate).
