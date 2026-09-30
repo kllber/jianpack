@@ -152,6 +152,10 @@ def load_versions_json(manifest: dict) -> dict:
 # 把容器里的一段当作独立文件（给 zipfile 用；偏移从 0 开始）
 # ---------------------------------------------------------------------------
 
+class _Cancelled(Exception):
+    """后台解压被要求中止（关软件时用）。"""
+
+
 class _Region(io.RawIOBase):
     """容器文件 ``[base, base+length)`` 这一段，冒充成一个从 0 开始的文件。
 
@@ -328,12 +332,14 @@ def _copy_region(src: Path, offset: int, length: int, out) -> None:
 
 
 def _extract_block(handle, offset: int, length: int, out_dir: Path, root: Path,
-                   state: dict, progress) -> None:
+                   state: dict, progress, should_stop=None) -> None:
     """把一个数据块（内部 zip）解到 ``out_dir``。"""
     out_dir.mkdir(parents=True, exist_ok=True)
     region = _Region(handle, offset, length)
     with zipfile.ZipFile(region) as archive:
         for info in archive.infolist():
+            if should_stop is not None and should_stop():
+                raise _Cancelled()
             if info.is_dir():
                 continue
             if info.file_size > (8 << 30):
@@ -422,7 +428,8 @@ def extract(container: str | Path, dest: str | Path, progress=None) -> Path:
     return dest
 
 
-def materialize(container: str | Path, dest: str | Path, version_id: str) -> Path:
+def materialize(container: str | Path, dest: str | Path, version_id: str,
+                should_stop=None) -> Path:
     """把某个版本的数据块解到 ``dest/versions/<id>/``（切换过去之前调用）。"""
     container = Path(container)
     dest = Path(dest)
@@ -437,9 +444,24 @@ def materialize(container: str | Path, dest: str | Path, version_id: str) -> Pat
         state = {"done": 0, "total": 1}
         with container.open("rb") as handle:
             _extract_block(handle, int(entry.get("off", 0)), int(entry.get("len", 0)),
-                           out, root, state, None)
+                           out, root, state, None, should_stop)
         return out
     raise ProjectFileError(_("这个版本的数据块不见了，无法切换。"))
+
+
+def missing_versions(container: str | Path, dest: str | Path) -> list[str]:
+    """还没解到磁盘的版本 id（打开后可以让后台慢慢把它们解出来）。"""
+    try:
+        manifest = read_manifest(container)
+    except ProjectFileError:
+        return []
+    dest = Path(dest)
+    out: list[str] = []
+    for entry in manifest.get("versions") or []:
+        vid = str(entry.get("id") or "")
+        if vid and not (dest / "versions" / vid / PROJECT_JSON).is_file():
+            out.append(vid)
+    return out
 
 
 def block_sizes(container: str | Path) -> dict[str, int]:

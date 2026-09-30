@@ -242,6 +242,10 @@ def save_project(project: Project, path: str | Path | None = None,
     if container_mode:
         project.base_dir.mkdir(parents=True, exist_ok=True)
         (project.base_dir / container.PROJECT_JSON).write_bytes(text.encode("utf-8"))
+        # 打开后可能在后台解其它版本；先等它收尾，免得和保存抢同一批文件
+        wait = getattr(project, "wait_materialize", None)
+        if wait is not None:
+            wait()
         versions_json = _read_versions_json(project.base_dir)
         source = project.source_path if project.is_container else None
         manifest = container.save(target, project.base_dir, versions_json, source=source)

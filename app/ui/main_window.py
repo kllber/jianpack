@@ -289,7 +289,8 @@ class MainWindow(tk.Tk):
 
         def work() -> None:
             try:
-                results["project"] = load_project(path, progress=report)
+                results["project"] = load_project(path, progress=report,
+                                                  background_materialize=True)
             except BaseException as exc:         # noqa: BLE001 - 原样带回主线程
                 results["error"] = exc
             finally:

@@ -29,6 +29,7 @@ from pathlib import Path
 from ..i18n import t as _
 from . import container
 from .errors import ProjectFileError
+from .project import _pad_version
 
 VERSIONS_JSON = "versions.json"
 VERSIONS_DIR = "versions"
@@ -447,7 +448,7 @@ class VersionStore:
                            payload_tops=tops)
         self.items.append(item)
         self.current = item.id
-        self.prune()
+        self.prune(project)
         self.save()
         return item
 
@@ -473,13 +474,8 @@ class VersionStore:
             return target
 
         target_dir = self.dir_for(target_id)
-        if not target_dir.is_dir() and self.container_path is not None:
-            # 数据块还没解到磁盘（打开时只解了当前版本）→ 现在按需解开它
-            try:
-                container.materialize(self.container_path, self.base_dir, target_id)
-            except ProjectFileError:
-                pass
-        if not target_dir.is_dir():
+        self._ensure_materialized(project, target)
+        if not (target_dir / "project.json").is_file():
             raise ProjectFileError(
                 _("版本「{name}」的存档已经不存在了，无法切换。").format(
                     name=target.display()))
@@ -510,12 +506,29 @@ class VersionStore:
         self.save()
         return target
 
-    def prune(self) -> list[VersionInfo]:
+    def _ensure_materialized(self, project, item) -> None:
+        """确保这个版本的目录已经在磁盘上（懒解压时要先从容器里解出来）。"""
+        if item is None or self.container_path is None:
+            return
+        directory = self.dir_for(item.id)
+        if (directory / "project.json").is_file():
+            return
+        # 打开后后台可能在解它 → 先等它收尾，避免两边同时写同一个目录
+        wait = getattr(project, "wait_materialize", None)
+        if wait is not None:
+            wait()
+        try:
+            container.materialize(self.container_path, self.base_dir, item.id)
+        except ProjectFileError:
+            pass
+
+    def prune(self, project=None) -> list[VersionInfo]:
         """把被淘汰版本的程序文件删掉，返回被清理的版本。"""
         stripped: list[VersionInfo] = []
         for item in self.retired_items():
             if item.id == self.current or not item.payload_stored:
                 continue
+            self._ensure_materialized(project, item)
             dest = self.dir_for(item.id)
             for top in item.payload_tops:
                 path = dest / top
@@ -530,11 +543,27 @@ class VersionStore:
             stripped.append(item)
         return stripped
 
-    def rename(self, vid: str, label: str, note: str) -> None:
+    def rename(self, project, vid: str, version: str, note: str) -> None:
+        """改版本号（可顺带改备注）。
+
+        当前版本改号时，同步写回工程（安装包文件名、实时预览、窗口标题都跟着走）；
+        程序文件版本如果原本就是按版本号自动补的，也跟着更新。
+        """
         item = self.item(vid)
         if item is None:
             return
-        item.label = label.strip()
+        version = (version or "").strip()
+        if version:
+            old_version = item.version
+            item.version = version
+            item.label = f"v{version}"
+            if vid == self.current and project is not None:
+                project.app.version = version
+                if (not project.app.file_version
+                        or project.app.file_version == _pad_version(old_version)):
+                    project.app.file_version = ""
+                    project.apply_derived()
+                item.file_version = project.app.file_version
         item.note = note.strip()
         self.save()
 

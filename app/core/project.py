@@ -737,11 +737,29 @@ class Project:
 
     def cleanup(self) -> None:
         """删掉本软件自己的临时工作目录（容器工程才有）。"""
+        # 后台可能还在把其它版本解出来 → 先叫停，再删目录（不阻塞太久）
+        self.cancel_materialize()
+        thread = getattr(self, "_materialize_thread", None)
+        if thread is not None:
+            thread.join(timeout=15)
         if self.work_dir is not None:
             from . import container
 
             container.cleanup(self.work_dir)
             self.work_dir = None
+
+    # -- 后台把其它版本解出来 -----------------------------------------------
+
+    def wait_materialize(self) -> None:
+        """等「后台把其它版本解出来」这件事收尾（已经做完就直接返回）。"""
+        done = getattr(self, "_materialize_done", None)
+        if done is not None:
+            done.wait()
+
+    def cancel_materialize(self) -> None:
+        cancel = getattr(self, "_materialize_cancel", None)
+        if cancel is not None:
+            cancel.set()
 
     # -- 派生 ---------------------------------------------------------------
 
@@ -1100,7 +1118,8 @@ class Project:
 # 加载入口
 # ---------------------------------------------------------------------------
 
-def load_project(path: str | Path, progress=None) -> Project:
+def load_project(path: str | Path, progress=None,
+                 background_materialize: bool = False) -> Project:
     """读取并校验工程文件。结构性问题直接抛 :class:`ProjectFileError`。
 
     支持两种 ``.jianpack``：单文件容器（``PK`` 开头的 zip）和老的 foldered
@@ -1174,7 +1193,43 @@ def load_project(path: str | Path, progress=None) -> Project:
         container.cleanup(work_dir)
         raise
     project.apply_derived()
+    if background_materialize and project.is_container:
+        _start_background_materialize(project)
     return project
+
+
+def _start_background_materialize(project: "Project") -> None:
+    """打开工程后，在后台把**其它版本**的数据块也解到磁盘。
+
+    这样等用户真的要切版本时，目录已经在磁盘上了，切换就是「改名 + 改索引」（≈0），
+    而且不影响打开的速度（打开只解当前版本）。关软件 / 保存时会叫停或等它收尾。
+    """
+    import threading
+
+    from . import container
+
+    cancel = threading.Event()
+    done = threading.Event()
+    project._materialize_cancel = cancel
+    project._materialize_done = done
+
+    def work() -> None:
+        try:
+            ids = container.missing_versions(project.source_path, project.base_dir)
+            for vid in ids:
+                if cancel.is_set():
+                    break
+                try:
+                    container.materialize(project.source_path, project.base_dir, vid,
+                                          should_stop=cancel.is_set)
+                except Exception:  # noqa: BLE001 - 后台解压失败不该影响使用
+                    pass
+        finally:
+            done.set()
+
+    thread = threading.Thread(target=work, daemon=True, name="jianpack-materialize")
+    project._materialize_thread = thread
+    thread.start()
 
 
 def _project_from_data(data: dict, source: Path, base_dir: Path, is_container: bool,

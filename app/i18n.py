@@ -1864,6 +1864,12 @@ EN: dict[str, str] = {
     "详细信息": "Details",
     "以前的版本": "Previous Versions",
 
+    # -- 版本号改名（版本面板「改版本号…」）--
+    "修改版本号": "Edit version",
+    "改版本号…": "Edit version…",
+    "改完会同步到安装包文件名、实时预览和窗口标题":
+        "The installer file name, the live preview and the window title all follow it",
+
     # -- 卡顿 / 异常可见性修复 --
     "正在统计缓存占用…": "Counting cache usage…",
     "正在统计缓存…": "Counting cache…",

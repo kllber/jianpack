@@ -111,7 +111,7 @@ class VersionPanel(ttk.Frame):
         self.delete_button.pack(side="right")
         self.lock_button = ttk.Button(bar, text=_("锁定"), width=5, command=self.toggle_lock)
         self.lock_button.pack(side="right", padx=(0, 4))
-        self.rename_button = ttk.Button(bar, text=_("重命名…"), width=8, command=self.rename)
+        self.rename_button = ttk.Button(bar, text=_("改版本号…"), width=9, command=self.rename)
         self.rename_button.pack(side="right", padx=(0, 4))
 
         self.hint = ttk.Label(self, foreground=theme.c("hint"), justify="left",
@@ -154,8 +154,8 @@ class VersionPanel(ttk.Frame):
             is_current = item is not None and item.id == store.current
             lock = "🔒 " if item.locked else ""
             if is_current:
-                name = "▶ " + lock + (f"v{project.app.version}"
-                                      if project.app.version else item.display())
+                shown = item.version or project.app.version
+                name = "▶ " + lock + (f"v{shown}" if shown else item.display())
             else:
                 name = lock + item.display()
             if item.id in retired_ids:
@@ -446,15 +446,25 @@ class VersionPanel(ttk.Frame):
         item = self._store.item(vid)
         if item is None:
             return
-        dialog = EntryDialog(self.winfo_toplevel(), _("重命名版本"), [
-            {"key": "label", "label": "名称", "default": item.display()},
+        dialog = EntryDialog(self.winfo_toplevel(), _("修改版本号"), [
+            {"key": "version", "label": "版本号", "default": item.version,
+             "hint": "改完会同步到安装包文件名、实时预览和窗口标题"},
             {"key": "note", "label": "备注", "default": item.note},
         ])
         if dialog.result is None:
             return
-        self._store.rename(vid, str(dialog.result.get("label", "")),
-                           str(dialog.result.get("note", "")))
+        version = str(dialog.result.get("version", "")).strip() or item.version
+        if any(i.id != vid and i.version == version for i in self._store.items):
+            messagebox.showwarning(
+                _("版本号重复"),
+                _("已经有一个 v{version} 的版本了，请换一个版本号。").format(version=version),
+                parent=self.winfo_toplevel())
+            return
+        project = self._project()
+        self._store.rename(project, vid, version, str(dialog.result.get("note", "")))
         self.refresh()
+        if project is not None and vid == self._store.current:
+            self.app.touch()          # 标题栏 / 预览立刻跟着新版本号走
 
     def toggle_lock(self) -> None:
         vid = self._selected()
@@ -481,7 +491,7 @@ class VersionPanel(ttk.Frame):
 
             def work():
                 self._store.set_locked(vid, False)
-                self._store.prune()
+                self._store.prune(project)
                 self._store.save()
                 if project is not None:
                     save_project(project)

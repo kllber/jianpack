@@ -725,10 +725,10 @@ def shot_project() -> None:
     draw.text((64, 242), L("文件里装着：", "Inside the file:"),
               font=font(16, bold=True), fill=(37, 42, 51))
     rows = [
-        ("project.json", L("工程配置", "project settings")),
-        ("assets/", L("图标、欢迎页图片", "icon, welcome image")),
-        ("payload/", L("要打包的文件", "files to package")),
-        ("docs/", L("协议 / 日志（可选）", "license / changelog (optional)")),
+        (L("工程配置", "Project config"), L("应用信息、安装设置、界面文案", "app info, install settings, UI text")),
+        (L("资源文件", "Assets"), L("图标、页头图、欢迎页图", "icon, header, welcome image")),
+        (L("程序文件", "Program files"), L("要装到对方电脑上的东西", "what gets installed on the target PC")),
+        (L("历史版本", "Version history"), L("每个版本各存一份，可一键切换", "each version stored separately, switch anytime")),
     ]
     y = 282
     for name, desc in rows:
