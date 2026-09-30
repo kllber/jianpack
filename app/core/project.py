@@ -394,6 +394,32 @@ LANGUAGES: tuple[tuple[str, int], ...] = (
 )
 
 
+# 安装向导界面语言：值 = NSIS MUI 的语言名，显示名用该语言自己的写法。
+# 放在这里是为了让「数据模型」和「界面下拉框」共用同一份清单。
+MUI_LANGUAGES: tuple[tuple[str, str], ...] = (
+    ("SimpChinese", "简体中文"),
+    ("TradChinese", "中文(繁體)"),
+    ("English", "English"),
+    ("Japanese", "日本語"),
+    ("Korean", "한국어"),
+    ("German", "Deutsch"),
+    ("French", "Français"),
+    ("Spanish", "Español"),
+    ("PortugueseBR", "Português (Brasil)"),
+    ("Russian", "Русский"),
+    ("Italian", "Italiano"),
+    ("Dutch", "Nederlands"),
+    ("Polish", "Polski"),
+    ("Turkish", "Türkçe"),
+    ("Arabic", "العربية"),
+    ("Thai", "ไทย"),
+    ("Vietnamese", "Tiếng Việt"),
+    ("Indonesian", "Bahasa Indonesia"),
+)
+
+MUI_LANGUAGE_NAMES = frozenset(name for name, _label in MUI_LANGUAGES)
+
+
 @dataclass
 class LanguageEntry:
     """装进安装包 exe「属性 → 语言」里的一项语言。"""
@@ -424,6 +450,7 @@ def default_languages() -> list[LanguageEntry]:
 class InterfaceSection:
     language: str = "zh-CN"          # 兼容旧工程（新工程用 languages）
     languages: list[LanguageEntry] = field(default_factory=default_languages)
+    installer_language: str = "SimpChinese"   # 安装向导界面语言（NSIS MUI 名）
     branding_text: str = "{appName} 安装程序 v{appVersion}"
     show_abort_warning: bool = True
     show_details: bool = True
@@ -451,6 +478,7 @@ class InterfaceSection:
         return cls(
             language=_s(d, "language", where, "zh-CN"),
             languages=languages,
+            installer_language=_s(d, "installerLanguage", where, "SimpChinese"),
             branding_text=_s(d, "brandingText", where, "{appName} 安装程序 v{appVersion}"),
             show_abort_warning=_b(d, "showAbortWarning", where, True),
             show_details=_b(d, "showDetails", where, True),
@@ -472,6 +500,8 @@ class ShortcutEntry:
     default: bool = True
     user_can_toggle: bool = True
     name: str = "{appName}"
+    args: str = ""            # 启动参数（传给主程序）
+    icon: str = ""            # 图标：安装目录内的相对路径；空 = 用主程序图标
 
     @classmethod
     def from_dict(cls, d: dict, where: str) -> "ShortcutEntry":
@@ -480,6 +510,8 @@ class ShortcutEntry:
             default=_b(d, "default", where, True),
             user_can_toggle=_b(d, "userCanToggle", where, True),
             name=_s(d, "name", where, "{appName}"),
+            args=_s(d, "args", where),
+            icon=_s(d, "icon", where),
         )
 
 
@@ -494,6 +526,7 @@ class StartMenuShortcut(ShortcutEntry):
         return cls(
             enabled=base.enabled, default=base.default,
             user_can_toggle=base.user_can_toggle, name=base.name,
+            args=base.args, icon=base.icon,
             use_folder=_b(d, "useFolder", where, True),
             uninstall_shortcut=_b(d, "uninstallShortcut", where, True),
         )
@@ -755,8 +788,12 @@ class Project:
     # -- 遍历打包内容 --------------------------------------------------------
 
     def iter_payload(self) -> Iterator[tuple[Path, str]]:
-        """产出 ``(源文件绝对路径, 安装目录内的相对路径)``。"""
-        for idx, item in enumerate(self.files.items):
+        """产出 ``(源文件绝对路径, 安装目录内的相对路径)``。
+
+        先复制一份条目列表再遍历：打包在后台线程跑的时候，用户可能正在
+        增删条目，直接迭代原列表会报「列表大小改变」。
+        """
+        for idx, item in enumerate(list(self.files.items)):
             where = f"files.items[{idx}].source"
             if not item.source:
                 raise ProjectFileError(_("{where}: 未填写").format(where=where))
@@ -903,6 +940,23 @@ class Project:
 
         if not payload:
             add(error("files.items", _("打包内容为空")))
+
+        # 路径长度：Windows / NSIS 在 260 字符附近会出问题，提前提醒
+        long_paths: list[str] = []
+        for src, dest in payload:
+            if len(str(src)) > 240:
+                long_paths.append(str(src))
+            elif len(dest) > 210:
+                long_paths.append(dest)
+        if long_paths:
+            examples = "\n".join("  " + p for p in long_paths[:3])
+            more = (_("（另有 {n} 条）").format(n=len(long_paths) - 3)
+                    if len(long_paths) > 3 else "")
+            add(warning("files.items",
+                        _("有 {n} 条路径接近 Windows 的 260 字符上限，"
+                          "安装 / 解压时可能失败，建议把工程放到更短的路径下：\n"
+                          "{examples}{more}").format(
+                              n=len(long_paths), examples=examples, more=more)))
 
         if not app.main_exe:
             # 自动识别要再遍历一次打包内容；如果源本来就读不了（上面已经记过一条错误），
@@ -1108,33 +1162,78 @@ def load_project(path: str | Path, progress=None) -> Project:
               "请升级后再打开。").format(version=version, max=FORMAT_VERSION))
 
     gen = data.get("generator")
-    meta = _obj(data.get("project"), "project")
     try:
-        project = Project(
-            source_path=source,
-            base_dir=base_dir,
-            format_version=version,
-            generator=gen if isinstance(gen, dict) else {},
-            project_name=_s(meta, "name", "project"),
-            created_at=_s(meta, "createdAt", "project"),
-            modified_at=_s(meta, "modifiedAt", "project"),
-            app=AppInfo.from_dict(_obj(data.get("app"), "app"), "app"),
-            files=FilesSection.from_dict(_obj(data.get("files"), "files"), "files"),
-            install=InstallSection.from_dict(_obj(data.get("install"), "install"), "install"),
-            interface=InterfaceSection.from_dict(_obj(data.get("interface"), "interface"), "interface"),
-            shortcuts=ShortcutsSection.from_dict(_obj(data.get("shortcuts"), "shortcuts"), "shortcuts"),
-            uninstall=UninstallSection.from_dict(_obj(data.get("uninstall"), "uninstall"), "uninstall"),
-            build=BuildSection.from_dict(_obj(data.get("build"), "build"), "build"),
-            integration=IntegrationSection.from_dict(
-                _obj(data.get("integration"), "integration"), "integration"),
-            is_container=kind == "container",
-            work_dir=work_dir,
-        )
+        project = _project_from_data(data, source, base_dir, kind == "container",
+                                     work_dir, gen)
     except ProjectFileError:
         container.cleanup(work_dir)
         raise
     project.apply_derived()
     return project
+
+
+def _project_from_data(data: dict, source: Path, base_dir: Path, is_container: bool,
+                       work_dir: Path | None, generator=None) -> Project:
+    """把已经解析好的 JSON 变成 :class:`Project`（load_project / 版本切换共用）。"""
+    gen = generator if generator is not None else data.get("generator")
+    meta = _obj(data.get("project"), "project")
+    return Project(
+        source_path=source,
+        base_dir=base_dir,
+        format_version=data.get("formatVersion", FORMAT_VERSION),
+        generator=gen if isinstance(gen, dict) else {},
+        project_name=_s(meta, "name", "project"),
+        created_at=_s(meta, "createdAt", "project"),
+        modified_at=_s(meta, "modifiedAt", "project"),
+        app=AppInfo.from_dict(_obj(data.get("app"), "app"), "app"),
+        files=FilesSection.from_dict(_obj(data.get("files"), "files"), "files"),
+        install=InstallSection.from_dict(_obj(data.get("install"), "install"), "install"),
+        interface=InterfaceSection.from_dict(_obj(data.get("interface"), "interface"), "interface"),
+        shortcuts=ShortcutsSection.from_dict(_obj(data.get("shortcuts"), "shortcuts"), "shortcuts"),
+        uninstall=UninstallSection.from_dict(_obj(data.get("uninstall"), "uninstall"), "uninstall"),
+        build=BuildSection.from_dict(_obj(data.get("build"), "build"), "build"),
+        integration=IntegrationSection.from_dict(
+            _obj(data.get("integration"), "integration"), "integration"),
+        is_container=is_container,
+        work_dir=work_dir,
+    )
+
+
+def reload_project(project: Project) -> Project:
+    """按原容器 / 文件夹模式，从磁盘**原地**重新读取（不重新解压容器）。
+
+    版本切换会把 ``base_dir`` 里的内容整个换掉；这时不能用 :func:`load_project`
+    ——它会把磁盘上（还是旧的）容器再解压一遍，把刚换好的内容盖回去。
+    """
+    if project.is_container:
+        raw = (project.base_dir / "project.json").read_bytes()
+    else:
+        raw = project.source_path.read_bytes()
+
+    try:
+        data = json.loads(raw.decode("utf-8"))
+    except UnicodeDecodeError as exc:
+        raise ProjectFileError(
+            _("工程文件不是 UTF-8 编码：{exc}").format(exc=exc)) from exc
+    except json.JSONDecodeError as exc:
+        raise ProjectFileError(
+            _("JSON 语法错误（第 {line} 行第 {col} 列）：{msg}").format(
+                line=exc.lineno, col=exc.colno, msg=exc.msg)) from exc
+
+    if not isinstance(data, dict):
+        raise ProjectFileError(_("工程文件的顶层必须是对象 {...}"))
+    version = data.get("formatVersion")
+    if not isinstance(version, int):
+        raise ProjectFileError(_("缺少 formatVersion 字段"))
+    if version > FORMAT_VERSION:
+        raise ProjectFileError(
+            _("此工程由更新版本的程序创建（formatVersion={version}，本程序支持到 {max}），"
+              "请升级后再打开。").format(version=version, max=FORMAT_VERSION))
+
+    new = _project_from_data(data, project.source_path, project.base_dir,
+                             project.is_container, project.work_dir)
+    new.apply_derived()
+    return new
 
 
 # ---------------------------------------------------------------------------

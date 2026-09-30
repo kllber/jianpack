@@ -21,13 +21,15 @@ from tkinter import filedialog, messagebox, ttk
 
 from ..core import assoc, paths
 from ..core.errors import PackError
-from ..core.settings import Settings, save_settings
+from ..core.settings import DATE_FORMATS, Settings, save_settings
 from . import theme
 from .. import i18n
 from ..i18n import t as _
-from .widgets import APP_FONT
+from .widgets import APP_FONT, ScrollFrame
 
 BOLD = ("Microsoft YaHei UI", 11, "bold")
+# 设置窗口默认只展示到「文件关联」，其余（缓存 / 初始化）滚动查看
+BODY_HEIGHT = 430
 
 
 def _size_text(num_bytes: int) -> str:
@@ -52,9 +54,10 @@ class PreferencesDialog(tk.Toplevel):
         self.welcome_var = tk.BooleanVar(value=settings.show_welcome)
         self.preview_var = tk.BooleanVar(value=settings.show_preview)
         self.auto_last_var = tk.BooleanVar(value=settings.auto_open_last)
+        self.date_var = tk.StringVar(value=settings.date_format)
 
         self.title(_("首选项 / 设置"))
-        self.resizable(False, False)
+        self.resizable(True, True)
         self.configure(background=theme.c("panel"))
         self.protocol("WM_DELETE_WINDOW", self._cancel)
         self.bind("<Escape>", lambda _e: self._cancel())
@@ -63,6 +66,7 @@ class PreferencesDialog(tk.Toplevel):
             self.transient(master)
 
         self._build()
+        self.minsize(520, 430)
         self.update_idletasks()
         self._center(master)
         self.deiconify()
@@ -83,7 +87,11 @@ class PreferencesDialog(tk.Toplevel):
                  foreground=theme.c("accent_soft"), font=APP_FONT
                  ).pack(anchor="w", padx=22, pady=(0, 12))
 
-        body = ttk.Frame(self, padding=(22, 16, 22, 0))
+        body_scroll = ScrollFrame(self)
+        body_scroll.pack(fill="both", expand=True)
+        body_scroll.canvas.configure(height=BODY_HEIGHT)
+        self.body_scroll = body_scroll
+        body = ttk.Frame(body_scroll.inner, padding=(22, 16, 22, 16))
         body.pack(fill="both", expand=True)
 
         language = ttk.LabelFrame(body, text=" " + _("界面语言") + " ",
@@ -119,6 +127,17 @@ class PreferencesDialog(tk.Toplevel):
         ttk.Checkbutton(habits, text=_("默认显示「安装效果预览」"), variable=self.preview_var
                         ).pack(anchor="w", pady=2)
 
+        date_frame = ttk.LabelFrame(body, text=" " + _("日期格式") + " ",
+                                    padding=(14, 10, 14, 12))
+        date_frame.pack(fill="x", pady=(0, 12))
+        for value, label in (("ymd", "年/月/日"), ("mdy", "月/日/年"), ("dmy", "日/月/年")):
+            ttk.Radiobutton(date_frame, text=_(label), value=value,
+                            variable=self.date_var).pack(anchor="w", pady=2)
+        ttk.Label(date_frame, foreground=theme.c("hint"), font=APP_FONT,
+                  wraplength=430, justify="left",
+                  text=_("只影响版本列表里日期的显示顺序（例如 26/09/30）。")
+                  ).pack(anchor="w", pady=(6, 0))
+
         assoc_frame = ttk.LabelFrame(body, text=" " + _("文件关联") + " ",
                                      padding=(14, 10, 14, 12))
         assoc_frame.pack(fill="x", pady=(0, 12))
@@ -151,8 +170,16 @@ class PreferencesDialog(tk.Toplevel):
                          "解开单文件工程、编译中间产物都放这里；换目录后下次打开工程时生效。\n"
                          "「用默认位置」只清掉自定义路径，不会删除文件。")
                   ).pack(anchor="w", pady=(6, 0))
-        ttk.Button(cache, text=_("清空缓存文件…"),
-                   command=self._clear_cache).pack(anchor="w", pady=(8, 0))
+        self.cache_info = ttk.Label(cache, foreground=theme.c("hint"), font=APP_FONT,
+                                    wraplength=430, justify="left", text="")
+        self.cache_info.pack(anchor="w", pady=(6, 0))
+        cache_actions = ttk.Frame(cache)
+        cache_actions.pack(anchor="w", pady=(8, 0))
+        ttk.Button(cache_actions, text=_("清空缓存文件…"),
+                   command=self._clear_cache).pack(side="left")
+        ttk.Button(cache_actions, text=_("打开缓存目录"),
+                   command=self._open_cache).pack(side="left", padx=(8, 0))
+        self._refresh_cache_info()
 
         reset = ttk.LabelFrame(body, text=" " + _("初始化") + " ",
                                padding=(14, 10, 14, 12))
@@ -214,6 +241,47 @@ class PreferencesDialog(tk.Toplevel):
             initialdir=current if current and Path(current).is_dir() else str(paths.data_dir()))
         if chosen:
             self.cache_var.set(chosen)
+
+    def _open_cache(self) -> None:
+        """用资源管理器打开缓存目录（不存在的就先建出来）。"""
+        import os
+
+        from ..core import container
+
+        root = container.cache_root()
+        try:
+            root.mkdir(parents=True, exist_ok=True)
+            os.startfile(str(root))
+        except OSError as exc:
+            messagebox.showerror(_("打不开缓存目录"), str(exc), parent=self)
+
+    def _refresh_cache_info(self) -> None:
+        """把「缓存实际在哪、占多大」显示出来，别让它悄悄占空间。"""
+        from ..core import container
+
+        root = container.cache_root()
+        dirs: list[Path] = []
+        total = 0
+        if root.is_dir():
+            for entry in root.iterdir():
+                try:
+                    if not entry.is_dir() or not entry.name.startswith(container.WORK_PREFIX):
+                        continue
+                except OSError:
+                    continue
+                dirs.append(entry)
+                for path in entry.rglob("*"):
+                    try:
+                        if path.is_file():
+                            total += path.stat().st_size
+                    except OSError:
+                        pass
+        try:
+            self.cache_info.configure(
+                text=_("当前缓存位置：{path}\n其中临时工程 {n} 个，约 {size}。").format(
+                    path=root, n=len(dirs), size=_size_text(total)))
+        except tk.TclError:
+            pass
 
     def _clear_cache(self) -> None:
         """删掉缓存目录里本软件产生的「临时工程」（跳过当前正在用的那个）。
@@ -279,6 +347,7 @@ class PreferencesDialog(tk.Toplevel):
             _("已清理 {n} 项，约释放 {size}。").format(
                 n=removed, size=_size_text(total)),
             parent=self)
+        self._refresh_cache_info()
 
     def _persist(self) -> bool:
         try:
@@ -291,17 +360,21 @@ class PreferencesDialog(tk.Toplevel):
     def _save(self) -> None:
         old_theme = self.settings.theme
         old_language = self.settings.language
+        old_date = self.settings.date_format
         self.settings.theme = "dark" if self.theme_var.get() == "dark" else "light"
         self.settings.language = i18n.normalize(self.language_var.get())
         self.settings.show_welcome = bool(self.welcome_var.get())
         self.settings.show_preview = bool(self.preview_var.get())
         self.settings.auto_open_last = bool(self.auto_last_var.get())
         self.settings.cache_dir = self.cache_var.get().strip()
+        self.settings.date_format = (self.date_var.get()
+                                     if self.date_var.get() in DATE_FORMATS else "ymd")
         if not self._persist():
             return
         self.saved = True
         self.restart_needed = (self.settings.theme != old_theme
-                               or self.settings.language != old_language)
+                               or self.settings.language != old_language
+                               or self.settings.date_format != old_date)
         self.destroy()
 
     def _reset(self) -> None:

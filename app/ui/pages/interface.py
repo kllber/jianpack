@@ -22,6 +22,12 @@ class InterfacePage(StepPage):
                    "文字里可以用这些占位符：{appName} {appVersion} {appPublisher} "
                    "{appHomepage} {installMode}；"
                    "也可以用 $INSTDIR 这类安装时才会确定的路径。")
+        from ...core.project import MUI_LANGUAGES
+
+        self.combo(common, "安装向导语言", interface, "installer_language",
+                   [(name, label) for name, label in MUI_LANGUAGES],
+                   hint="安装向导自带的按钮、提示用哪种语言。"
+                        "第 1 步的「语言」只管安装包 exe 属性里列出的语言，两者不一样。")
         self.text(common, "底部状态栏", interface, "branding_text",
                   hint="安装向导最下面那行小字")
         self.check(common, "安装中途取消时二次确认", interface, "show_abort_warning")
@@ -243,6 +249,10 @@ class InterfacePage(StepPage):
         self.check(desk_body, "允许用户在安装时修改", shortcuts.desktop, "user_can_toggle")
         self.text(desk_body, "快捷方式名称", shortcuts.desktop, "name",
                   hint="不带 .lnk 后缀")
+        self.text(desk_body, "启动参数", shortcuts.desktop, "args",
+                  hint="传给主程序的命令行参数，留空则不带参数")
+        self.text(desk_body, "图标文件", shortcuts.desktop, "icon",
+                  hint="安装目录内的相对路径，例如 assets\\app.ico；留空用主程序图标")
         self.gate(desk_body, lambda: bool(desk_on.get()), [desk_on])
 
         start_menu = group("开始菜单快捷方式")
@@ -252,6 +262,10 @@ class InterfacePage(StepPage):
         self.check(menu_body, "默认勾选", shortcuts.start_menu, "default")
         self.check(menu_body, "允许用户在安装时修改", shortcuts.start_menu, "user_can_toggle")
         self.text(menu_body, "快捷方式名称", shortcuts.start_menu, "name")
+        self.text(menu_body, "启动参数", shortcuts.start_menu, "args",
+                  hint="传给主程序的命令行参数，留空则不带参数")
+        self.text(menu_body, "图标文件", shortcuts.start_menu, "icon",
+                  hint="安装目录内的相对路径，例如 assets\\app.ico；留空用主程序图标")
         self.check(menu_body, "放在同名子文件夹里", shortcuts.start_menu, "use_folder",
                    hint="开始菜单里会多一层文件夹，例如「开始菜单\\我的小工具\\我的小工具」")
         self.check(menu_body, "同时放一个「卸载」快捷方式",

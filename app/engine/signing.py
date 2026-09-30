@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from ..i18n import t as _
+from .makensis import no_window_flags
 
 # Windows SDK 里 signtool 的常见位置（版本号在中间一段，用 glob 找最新的）
 SDK_GLOBS = (
@@ -72,7 +73,8 @@ def sign_file(target: str | Path, cert: str | Path | None, password: str = "",
 
     try:
         result = subprocess.run(command, capture_output=True, text=True,
-                                encoding="utf-8", errors="replace")
+                                encoding="utf-8", errors="replace",
+                                creationflags=no_window_flags())
     except OSError as exc:
         return SignResult(1, str(exc), command)
 

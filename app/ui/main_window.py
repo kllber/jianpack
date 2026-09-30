@@ -13,8 +13,9 @@ from tkinter import filedialog, messagebox, ttk
 from .. import __version__
 from ..core import assoc, demo
 from ..core.errors import PackError
-from ..core.project import load_project
+from ..core.project import load_project, reload_project
 from ..core.settings import load_settings, save_settings
+from ..core.versions import current_version_is_retired
 from .. import i18n
 from ..i18n import t as _, app_name
 from . import resources
@@ -31,9 +32,10 @@ from .start_dialog import StartDialog
 from .splash import Splash
 from .state import AppState
 from .tutorial import TutorialWindow
+from .version_panel import VersionPanel
 from .welcome_dialog import WelcomeDialog
 from . import theme
-from .widgets import APP_FONT, TITLE_FONT
+from .widgets import APP_FONT, TITLE_FONT, set_enabled_tree
 
 STEPS = (BasicPage, FilesPage, InstallPage, InterfacePage)
 
@@ -44,13 +46,20 @@ def project_file_types() -> list[tuple[str, str]]:
     return [(_("安装打包工程"), "*" + PROJECT_EXT), (_("所有文件"), "*.*")]
 
 
-SIDEBAR_WIDTH = 200      # 收起预览时左栏的宽度
+SIDEBAR_WIDTH = 470      # 收起预览时左栏的宽度（要放得下「版本迭代」面板）
 CONTENT_WIDTH = 1000     # 编辑区希望保底的宽度
+# 默认窗口高度：要让左栏的「安装效果预览」能以原尺寸（503 宽）完整显示
+#（左栏现在是「版本迭代 + 预览 + 开始打包」三块，比原来更高）；
+# 屏幕不够高时会在 _apply_preview 里自动收窄，预览再等比缩放兜底。
+WINDOW_HEIGHT = 1200
+WRAP_TEXT = 470          # 左栏提示文字的换行宽度
 
 # 打开工程的加载窗：读得快就不弹（免得小工程「闪一下」像出 bug）；
 # 一旦弹出来，就至少停留这么久，让用户看清这是什么窗口。
 SPLASH_DELAY_MS = 350
 SPLASH_MIN_MS = 800
+# 版本操作（冻结/切换/删除大版本）的加载窗：延迟出现，出现后至少停留一会儿
+VERSION_OP_MIN_MS = 500
 
 
 class MainWindow(tk.Tk):
@@ -80,6 +89,8 @@ class MainWindow(tk.Tk):
         self._preview_job = None
         self._jobs: set[str] = set()      # 其它延时动作，销毁时要一并取消
         self._load_job = None             # 后台读工程时的轮询句柄
+        self._version_job = None          # 后台跑版本操作时的轮询句柄
+        self._version_busy = False        # 版本操作进行中（期间冻结界面/预览）
         self._splash = None               # 当前的加载提示窗口
         self._keep_tutorial = False       # 从欢迎页进来的话，启动窗口这次不抢输入
         self._preview_shown = False
@@ -95,7 +106,6 @@ class MainWindow(tk.Tk):
         self._build_layout()
         self._bind_keys()
         self._apply_preview(first=True)
-        self._disable_maximize()
 
         if project_path:
             # 双击工程文件 / 带路径启动：后台读取，期间显示带图标的启动页
@@ -203,17 +213,18 @@ class MainWindow(tk.Tk):
             self.destroy()
             return
         kind, value = choice
-        # 接下来要弹文件对话框，父窗口必须是可见的，否则对话框可能不出现
-        self._show_window()
-        self.update_idletasks()
         if kind == "new":
+            # 新建要弹文件对话框，父窗口必须是可见的，否则对话框可能不出现
+            self._show_window()
+            self.update_idletasks()
             self.new_project()
             if self.app.project is None:
                 self._prompt_start()          # 取消 / 失败：回到启动窗口
             else:
                 self._reveal_main()
         elif value:
-            # 软件里打开工程：用「简化版、不带图标」的小加载窗
+            # 打开已有工程：**先不显示主窗口**（否则读条时背景会露出零散的空状态，
+            # 看着像 bug）；读完后 on_done 再显示。
             self._load_async(value, with_icon=False,
                              on_done=self._reveal_main,
                              on_fail=self._prompt_start)
@@ -238,6 +249,8 @@ class MainWindow(tk.Tk):
         self._remember(path)
         self._rebuild_pages()
         self._select_step(0)
+        self.version_panel.refresh()
+        self._apply_version_gate()
         if self._is_demo():
             messagebox.showinfo(
                 _("演示项目"),
@@ -347,6 +360,140 @@ class MainWindow(tk.Tk):
             return False
         return demo.is_demo(self.app.project.source_path)
 
+    def after_version_change(self, reload: bool = True, clear_payload: bool = False) -> None:
+        """版本切换 / 新建版本之后：重建界面。
+
+        ``reload=False`` 用于"新建版本"：这时内存里的工程才是最新的（版本号刚改过），
+        磁盘上的 project.json 还没写；重载会把刚设好的版本号冲掉。
+
+        ``reload=True`` 用于"切换版本"：磁盘上的内容已经被换成目标版本，
+        内存模型是旧的，必须原地重载；``clear_payload=True`` 表示目标版本是
+        「仅配置」，要把"打包内容"清空，不能留着上一版的文件冒充。
+
+        这里**不能**用 ``load_project``：切换已经改过 ``base_dir`` 里的内容，
+        再按磁盘上的旧容器解压一遍会把改动盖回去。
+        """
+        project = self.app.project
+        if project is None:
+            return
+        if reload:
+            try:
+                new = reload_project(project)
+            except (PackError, OSError) as exc:
+                messagebox.showerror(_("版本操作失败"), str(exc), parent=self)
+                return
+            if clear_payload and new.files.items:
+                new.files.items = []
+            self.app.adopt(new)
+        # 落盘已经在后台线程里做完了，这里只刷新界面
+        self.app.dirty = False
+        self._rebuild_pages()
+        self._select_step(0)
+        self.version_panel.refresh()
+        self._apply_version_gate()
+        self._sync_title()
+        self._schedule_preview()
+
+    # -- 耗时操作（版本冻结 / 切换等）在后台跑，配一个延迟加载窗 ---------------
+
+    def run_background(self, work, on_done, *, status: str = "", file_name: str = "") -> None:
+        """在后台线程执行 ``work()``，同时弹一个"加载窗"。
+
+        - 加载窗**延迟出现**：操作很快（小工程）就根本不弹，避免闪一下像 bug；
+        - 一旦出现，就至少停留一小会儿，让用户看清；
+        - 完成后回到主线程调用 ``on_done(value, error)``。
+        """
+        if self._version_job is not None:
+            return                      # 已经有一个在跑了
+        self._version_busy = True
+        splash = Splash(self, with_icon=True, show=False, status=status,
+                        file_name=file_name)
+        self._splash = splash
+        result: dict = {}
+        shown_at = {"t": 0.0}
+
+        def runner() -> None:
+            try:
+                result["value"] = work()
+            except BaseException as exc:      # noqa: BLE001 - 原样带回主线程
+                result["error"] = exc
+
+        threading.Thread(target=runner, daemon=True).start()
+
+        def show_if_slow() -> None:
+            if result:
+                return
+            splash.show()
+            shown_at["t"] = time.monotonic()
+
+        show_job = self._later(SPLASH_DELAY_MS, show_if_slow)
+
+        def poll() -> None:
+            self._version_job = None
+            if not self.winfo_exists():
+                return
+            if not result:
+                self._version_job = self.after(40, poll)
+                return
+            try:
+                self.after_cancel(show_job)
+            except tk.TclError:
+                pass
+            self._jobs.discard(show_job)
+            delay = 0
+            if splash.is_shown:
+                elapsed = (time.monotonic() - shown_at["t"]) * 1000
+                delay = int(max(0, VERSION_OP_MIN_MS - elapsed))
+
+            def finish() -> None:
+                splash.close()
+                if self._splash is splash:
+                    self._splash = None
+                self._version_busy = False
+                on_done(result.get("value"), result.get("error"))
+
+            if delay > 0:
+                self._later(delay, finish)
+            else:
+                finish()
+
+        self._version_job = self.after(40, poll)
+
+    # -- 空工程 / 已淘汰版本 的界面开关 --------------------------------------
+    def _apply_version_gate(self) -> None:
+        """按当前版本的状态切换界面：
+
+        - 空工程（还没建版本）：只显示左侧的「版本迭代 / 创建」；
+        - 当前版本「已淘汰」：把「开始打包」面板换成一句说明；
+        - 其余：正常显示。
+        """
+        project = self.app.project
+        blank = bool(project is not None and self.version_panel.is_create_mode())
+        retired = bool(project is not None and not blank
+                       and current_version_is_retired(project))
+        state = "blank" if blank else ("retired" if retired else "full")
+        if state == getattr(self, "_gate_state", None):
+            return
+        self._gate_state = state
+        self._blank_mode = blank
+
+        for widget in (self.steps_bar, self.steps_sep, self.container,
+                       self.preview_panel, self.build_panel, self.build_retired,
+                       self.placeholder):
+            widget.pack_forget()
+
+        if state == "blank":
+            self.placeholder.pack(fill="both", expand=True)
+            return
+        self.steps_bar.pack(side="top", fill="x")
+        self.steps_sep.pack(fill="x", padx=20)
+        self.container.pack(fill="both", expand=True)
+        if state == "retired":
+            self.build_retired.pack(side="bottom", fill="x", padx=12, pady=(4, 8))
+        else:
+            self.build_panel.pack(side="bottom", fill="x", padx=12, pady=(4, 8))
+        self.preview_panel.pack(fill="both", expand=True, pady=(8, 0))
+
     def _remember(self, path: str | Path) -> None:
         """记进「最近打开」列表。存不下来也不影响使用。"""
         self.settings.remember(path)
@@ -455,48 +602,80 @@ class MainWindow(tk.Tk):
         outer = ttk.Frame(self)
         outer.pack(fill="both", expand=True)
 
-        # 左栏：上面是「打包步骤」，下面是「安装效果预览」。
-        # 预览放左栏而不是最右边，是为了让编辑区能吃掉全部剩余宽度 ——
-        # 窗口拉大 / 全屏时编辑区跟着变宽，而不是被左右两边夹住。
+        # 左栏（从上到下）：版本迭代 / 安装效果预览 / 开始打包。
+        # 预览放左栏而不是最右边，是为了让编辑区能吃掉全部剩余宽度。
         self.left_column = ttk.Frame(outer, width=PANEL_WIDTH)
         self.left_column.pack(side="left", fill="y")
         self.left_column.pack_propagate(False)
 
-        brand = ttk.Frame(self.left_column, padding=(14, 16, 14, 6))
-        brand.pack(fill="x")
-        ttk.Label(brand, text=_("打包步骤"), font=TITLE_FONT,
-                  foreground=theme.c("accent")).pack(anchor="w")
+        self.version_panel = VersionPanel(self.left_column, self.app)
+        self.version_panel.window = self
+        self.version_panel.pack(side="top", fill="x", padx=12, pady=(12, 2))
 
-        # 步骤列表做成两列（名称 + 一句话说明），才撑得住加宽后的左栏
-        self.step_list = ttk.Treeview(self.left_column, columns=("step", "desc"), show="",
-                                      selectmode="browse", height=len(STEPS))
-        self.step_list.column("step", width=150, anchor="w", stretch=False)
-        self.step_list.column("desc", width=340, anchor="w")
-        self.step_list.pack(fill="x", padx=(12, 12), pady=(2, 6))
-        self.step_list.bind("<<TreeviewSelect>>", self._on_step_click)
+        ttk.Separator(self.left_column, orient="horizontal").pack(
+            side="top", fill="x", padx=12, pady=(8, 0))
 
-        ttk.Separator(self.left_column, orient="horizontal").pack(fill="x", padx=12)
-
-        # 「开始打包」常驻左栏底部：按钮 + 日志，随时能点（原来是一个独立的步骤页）
+        # 「开始打包」常驻左栏底部：按钮 + 日志，随时能点
         self.build_panel = BuildPanel(self.left_column, self.app)
         self.build_panel.window = self
         self.build_panel.pack(side="bottom", fill="x", padx=12, pady=(4, 8))
 
+        # 当前版本「已淘汰」时，用它顶替「开始打包」面板（并说明原因）
+        self.build_retired = ttk.Frame(self.left_column)
+        ttk.Label(self.build_retired, text=_("开始打包"), font=TITLE_FONT,
+                  foreground=theme.c("hint")).pack(anchor="w", pady=(0, 6))
+        ttk.Label(self.build_retired, foreground=theme.c("hint"), justify="left",
+                  wraplength=WRAP_TEXT, font=APP_FONT,
+                  text=_("当前版本已被淘汰，不能再打包了。\n"
+                         "想继续更新，请在左上角的「版本迭代 / 切换」里"
+                         "切换到最新的两个版本。")).pack(anchor="w")
+
         self.preview_panel = PreviewPanel(self.left_column, self.app)
-        self.preview_panel.pack(fill="both", expand=True, pady=(8, 0))
+        self.preview_panel.pack(fill="both", expand=True, pady=(8, 6))
 
         self.content_area = ttk.Frame(outer)
         self.content_area.pack(side="left", fill="both", expand=True)
 
-        nav = ttk.Frame(self.content_area, padding=(20, 6, 20, 14))
-        nav.pack(side="bottom", fill="x")
+        # 顶部：打包步骤（两列：名称 + 一句话说明）+ 上一步/下一步（挪到右边）
+        self.steps_bar = ttk.Frame(self.content_area, padding=(20, 14, 20, 8))
+        self.steps_bar.pack(side="top", fill="x")
+
+        nav = ttk.Frame(self.steps_bar)
+        nav.pack(side="right", anchor="n", padx=(14, 0), pady=(30, 0))
+        self.nav = nav
         self.back_button = ttk.Button(nav, text=_("< 上一步"), width=12, command=self.prev_step)
-        self.back_button.pack(side="left")
+        self.back_button.pack()
         self.next_button = ttk.Button(nav, text=_("下一步 >"), width=12, command=self.next_step)
-        self.next_button.pack(side="left", padx=(8, 0))
+        self.next_button.pack(pady=(6, 0))
+
+        steps = ttk.Frame(self.steps_bar)
+        steps.pack(side="left", fill="x", expand=True)
+        self.steps = steps
+        ttk.Label(steps, text=_("打包步骤"), font=TITLE_FONT,
+                  foreground=theme.c("accent")).pack(anchor="w")
+        self.step_list = ttk.Treeview(steps, columns=("step", "desc"), show="",
+                                      selectmode="browse", height=len(STEPS))
+        self.step_list.column("step", width=160, anchor="w", stretch=False)
+        self.step_list.column("desc", width=420, anchor="w")
+        self.step_list.pack(fill="x", pady=(4, 0))
+        self.step_list.bind("<<TreeviewSelect>>", self._on_step_click)
+
+        self.steps_sep = ttk.Separator(self.content_area, orient="horizontal")
+        self.steps_sep.pack(fill="x", padx=20)
 
         self.container = ttk.Frame(self.content_area)
         self.container.pack(fill="both", expand=True)
+        self._gate_state = None
+
+        # 空工程（还没建第一个版本）时显示的提示页
+        self.placeholder = ttk.Frame(self.content_area, padding=(40, 70))
+        ttk.Label(self.placeholder, text=_("这个工程还没有任何版本"),
+                  font=TITLE_FONT, foreground=theme.c("accent")).pack()
+        ttk.Label(self.placeholder, foreground=theme.c("hint"), font=APP_FONT,
+                  justify="center", wraplength=560,
+                  text=_("请在左上角「版本迭代 / 创建」里点「新建版本…」，"
+                         "创建第一个版本后，完整界面就会出现。")).pack(pady=(10, 0))
+        self._blank_mode = False
 
     def _bind_keys(self) -> None:
         self.bind("<Control-n>", lambda _e: self.new_project())
@@ -507,11 +686,6 @@ class MainWindow(tk.Tk):
         self.bind("<F1>", self._shortcut(self.open_tutorial, 112))
         self.bind("<Control-comma>", lambda _e: self.open_preferences())
         self.bind("<Control-p>", lambda _e: self._toggle_preview_from_key())
-        # 窗口每次显示出来都（重新）去掉最大化按钮
-        self.bind("<Map>", lambda _e: self._disable_maximize(), add="+")
-        # 去掉按钮只能挡住"点按钮"；双击标题栏 / Win+↑ 仍会最大化，
-        # 所以再加一道：一旦发现被最大化了，立刻还原。
-        self.bind("<Configure>", self._guard_maximize, add="+")
         self.bind("<Alt-Left>", lambda _e: self.prev_step())
         self.bind("<Alt-Right>", lambda _e: self.next_step())
 
@@ -559,15 +733,52 @@ class MainWindow(tk.Tk):
         self._sync_title()
 
     def _on_step_click(self, _event=None) -> None:
+        if self.editing_locked:
+            current = str(self._index)
+            if self.step_list.selection() != (current,):
+                self.step_list.selection_set(current)
+            return
         selection = self.step_list.selection()
         if selection and int(selection[0]) != self._index:
             self._select_step(int(selection[0]))
 
     def prev_step(self) -> None:
+        if self.editing_locked:
+            return
         self._select_step(self._index - 1)
 
     def next_step(self) -> None:
+        if self.editing_locked:
+            return
         self._select_step(self._index + 1)
+
+    # -- 打包期间锁定编辑区 --------------------------------------------------
+
+    @property
+    def editing_locked(self) -> bool:
+        return getattr(self, "_editing_locked", False)
+
+    def set_editing_enabled(self, enabled: bool) -> None:
+        """打包 / 校验期间锁住编辑区和步骤切换，避免用户在后台干活时改数据。"""
+        self._editing_locked = not enabled
+        for page in self._pages:
+            set_enabled_tree(page.form, enabled)
+        state = "!disabled" if enabled else "disabled"
+        for button in (self.back_button, self.next_button):
+            try:
+                button.state([state])
+            except tk.TclError:
+                pass
+        try:
+            self.version_panel.refresh_enabled()
+        except (tk.TclError, AttributeError):
+            pass
+        if enabled:
+            # 解锁会把所有控件都启用，这里让各页按自己的联动规则重刷一遍，
+            # 否则「父项没勾 → 子项变灰」这类状态会被一起解除。
+            with self.app.quiet():
+                for page in self._pages:
+                    page.on_enter()
 
     def flush_all(self) -> None:
         for page in self._pages:
@@ -580,10 +791,14 @@ class MainWindow(tk.Tk):
             self.title(app_name())
             return
         is_demo = self._is_demo()
-        name = (self.app.project.project_name or self.app.project.source_path.stem
-                or _("未命名工程"))
+        # 标题里的项目名**只跟工程文件名**走（改里面的应用名不影响它）
+        file_name = self.app.project.source_path.stem or _("未命名工程")
         mark = "" if is_demo else (" *" if self.app.dirty else "")
-        self.title(f"{app_name()}--{_('当前项目：')}{name}{mark}")
+        version = self.app.project.app.version
+        title = f"{app_name()}--{_('当前项目：')}{file_name}{mark}"
+        if version:
+            title += f"    {_('打开版本：')}{version}"
+        self.title(title)
 
         path = self.app.project.source_path
         if is_demo:
@@ -601,6 +816,14 @@ class MainWindow(tk.Tk):
 
     def _schedule_preview(self) -> None:
         """任何改动都排队刷新预览；连续输入时只在停下来之后画一次。"""
+        if self._version_busy:
+            return                      # 版本操作进行中，别去碰正在搬动的文件
+        if self.app.project is not None:
+            try:
+                # 「占用」那一列也让它在后台顺手更新一下
+                self.version_panel.schedule_size_refresh(600)
+            except (tk.TclError, AttributeError):
+                pass
         if not self.settings.show_preview or self.app.project is None:
             return
         if self._preview_job is not None:
@@ -609,6 +832,8 @@ class MainWindow(tk.Tk):
 
     def _update_preview(self) -> None:
         self._preview_job = None
+        if self._version_busy:
+            return
         if self.app.project is None or not self.settings.show_preview:
             return
         # 控件里的最新值要先收回模型，预览读的才是当前内容
@@ -629,82 +854,13 @@ class MainWindow(tk.Tk):
         self.preview_var.set(not self.settings.show_preview)
         self.toggle_preview()
 
-    def _disable_maximize(self) -> None:
-        """去掉标题栏的「最大化」按钮，也就是取消全屏。
-
-        窗口仍然可以拖边框改大小 —— 只是不能一键铺满屏幕。
-        （版面是按普通窗口宽度排的，铺满后间距会显得空。）
-        """
-        if sys.platform != "win32":
-            return
-        try:
-            import ctypes
-            from ctypes import wintypes
-
-            user32 = ctypes.WinDLL("user32", use_last_error=True)
-            hwnd_id = int(self.tk.call("wm", "frame", self._w), 16)
-            if not hwnd_id:
-                return
-            hwnd = wintypes.HWND(hwnd_id)
-
-            GWL_STYLE = -16
-            WS_MAXIMIZEBOX = 0x00010000
-            WS_CAPTION = 0x00C00000
-
-            # 必须显式声明签名：ctypes 默认按 32 位处理返回值，
-            # 会把 64 位的窗口句柄/样式值截断，改了也白改。
-            get_long = getattr(user32, "GetWindowLongPtrW", None) or user32.GetWindowLongW
-            set_long = getattr(user32, "SetWindowLongPtrW", None) or user32.SetWindowLongW
-            get_long.restype = ctypes.c_ssize_t
-            get_long.argtypes = [wintypes.HWND, ctypes.c_int]
-            set_long.restype = ctypes.c_ssize_t
-            set_long.argtypes = [wintypes.HWND, ctypes.c_int, ctypes.c_ssize_t]
-
-            style = get_long(hwnd, GWL_STYLE)
-            if not style & WS_CAPTION:
-                # 窗口还没真正创建出来时，wm frame 给的是个占位句柄，
-                # 改它没用 —— 等 <Map> 事件到了再改。
-                return
-            if not style & WS_MAXIMIZEBOX:
-                return
-
-            set_long(hwnd, GWL_STYLE, style & ~WS_MAXIMIZEBOX)
-
-            SWP_NOSIZE, SWP_NOMOVE, SWP_NOZORDER, SWP_FRAMECHANGED = 0x1, 0x2, 0x4, 0x20
-            user32.SetWindowPos.argtypes = [
-                wintypes.HWND, wintypes.HWND, ctypes.c_int, ctypes.c_int,
-                ctypes.c_int, ctypes.c_int, ctypes.c_uint]
-            user32.SetWindowPos(hwnd, None, 0, 0, 0, 0,
-                                SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED)
-        except Exception as exc:  # noqa: BLE001 - 改不了也不影响正常使用
-            print("[警告] 禁用最大化失败:", repr(exc), file=sys.stderr)
-
-    def _guard_maximize(self, event) -> None:
-        """被最大化了就还原回去。
-
-        延后一点再判断：``<Configure>`` 触发的那一刻，Tk 自己的窗口状态
-        可能还没更新成 ``zoomed``。
-        """
-        if event.widget is not self:
-            return
-        self._later(60, self._unmaximize)
-
-    def _unmaximize(self) -> None:
-        try:
-            state = self.state()
-        except tk.TclError:
-            return
-        if state == "zoomed":
-            try:
-                self.state("normal")
-            except tk.TclError:
-                pass
-
     def _show_window(self) -> None:
-        """显示主窗口。窗口真正显示出来之后再禁一次最大化 —— 那之前
-        ``wm frame`` 拿到的还不是真正的标题栏窗口。"""
+        """显示主窗口。
+
+        最大化 / 还原交给系统标题栏（双击标题栏、Win+↑ 都可以），不再拦。
+        默认尺寸和位置仍由 :meth:`_apply_preview` 决定，不受影响。
+        """
         self.deiconify()
-        self._later(80, self._disable_maximize)
 
     def toggle_preview(self, show: bool | None = None) -> None:
         if show is None:
@@ -721,7 +877,7 @@ class MainWindow(tk.Tk):
         show = self.settings.show_preview
 
         if show:
-            if not self._preview_shown:
+            if not self._preview_shown and self._gate_state != "blank":
                 self.preview_panel.pack(fill="both", expand=True, pady=(8, 0))
                 self._preview_shown = True
             self.preview_panel.refresh()
@@ -737,13 +893,25 @@ class MainWindow(tk.Tk):
 
         width = min(left + CONTENT_WIDTH, max(1000, self.winfo_screenwidth() - 80))
         self.minsize(min(left + 820, width), 680)
+        # 高度按「能完整显示预览」来，屏幕放不下再收窄（预览会等比缩放兜底）
+        height = min(WINDOW_HEIGHT, max(700, self.winfo_screenheight() - 80))
+
+        # 最大化时**不要**再设置 geometry：那会把窗口从最大化拽回普通大小，
+        # 用户一切换预览（Ctrl+P）或改设置就会「莫名弹回小窗」。
+        # 最大化下只需调整左栏宽度，其余交给系统，窗口才能一直铺满屏幕。
+        try:
+            maximized = self.state() == "zoomed"
+        except tk.TclError:
+            maximized = False
+        if maximized:
+            return
 
         if first:
             x = (self.winfo_screenwidth() - width) // 2
-            y = max(0, (self.winfo_screenheight() - 800) // 2 - 20)
+            y = max(0, (self.winfo_screenheight() - height) // 2 - 20)
         else:
             x, y = max(0, self.winfo_x()), max(0, self.winfo_y())
-        self.geometry(f"{width}x800+{x}+{y}")
+        self.geometry(f"{width}x{height}+{x}+{y}")
 
     # -- 文件操作 ------------------------------------------------------------
 
@@ -769,6 +937,8 @@ class MainWindow(tk.Tk):
         self._remember(project_file)
         self._rebuild_pages()
         self._select_step(0)
+        self.version_panel.refresh()
+        self._apply_version_gate()
 
     def open_project(self) -> None:
         if not self._confirm_discard():
@@ -833,10 +1003,12 @@ class MainWindow(tk.Tk):
         self._sync_title()
 
     def validate_project(self) -> None:
-        self._select_step(len(self._pages) - 1)
-        page = self._pages[self._index]
-        if hasattr(page, "run"):
-            page.run("validate")
+        """校验工程（F5 / 菜单「工具 → 校验工程」）。
+
+        打包动作已经搬到左栏常驻的「开始打包」面板，这里直接走它的
+        「校验工程」逻辑；结论输出在面板的日志里（有错会弹提示）。
+        """
+        self.build_panel.run("validate")
 
     def _open_output(self) -> None:
         for page in self._pages:
@@ -946,6 +1118,12 @@ class MainWindow(tk.Tk):
             except tk.TclError:
                 pass
             self._load_job = None
+        if self._version_job is not None:
+            try:
+                self.after_cancel(self._version_job)
+            except tk.TclError:
+                pass
+            self._version_job = None
         if self._splash is not None:
             self._splash.close()
             self._splash = None

@@ -7,9 +7,11 @@ from tkinter import messagebox, ttk
 
 from ...core.errors import ProjectFileError
 from ...core.project import FileItem
+from ...core.versions import current_version_is_retired
 from ...i18n import t as _
+from .. import theme
 from ..item_dest_dialog import ItemDestDialog
-from ..widgets import hint_label, section
+from ..widgets import APP_FONT, hint_label, section
 from .base import StepPage
 
 
@@ -19,22 +21,41 @@ class FilesPage(StepPage):
     subtitle = "把要装到用户电脑上的文件加进来，还可以调整它们在安装目录里的位置"
 
     def build(self, parent: ttk.Frame) -> None:
-        hint_label(parent,
-                   "选中的文件和文件夹会被打进安装包。若选的位置在工程目录之外，"
-                   "程序会问你要不要复制一份进工程——复制进来的话，"
-                   "整个工程文件夹就可以随意搬移、压缩、发给别人了。")
+        # 「当前版本已被淘汰」时的提示条（默认不显示）
+        self.notice = tk.Label(
+            parent, background=theme.c("note_bg"), foreground=theme.c("note_fg"),
+            font=APP_FONT, justify="left", anchor="w", wraplength=760,
+            highlightbackground=theme.c("note_border"), highlightthickness=1,
+            padx=10, pady=8)
+        self.notice.pack(fill="x", pady=(0, 8))
+        self.notice.pack_forget()
+
+        self._intro = hint_label(parent,
+                                 "选中的文件和文件夹会被打进安装包。若选的位置在工程目录之外，"
+                                 "程序会问你要不要复制一份进工程——复制进来的话，"
+                                 "整个工程文件夹就可以随意搬移、压缩、发给别人了。")
 
         bar = ttk.Frame(parent)
         bar.pack(fill="x", pady=(10, 6))
-        ttk.Button(bar, text=_("添加文件…"), command=self.add_files).pack(side="left")
-        ttk.Button(bar, text=_("添加文件夹…"), command=self.add_folder).pack(side="left", padx=(6, 0))
+        self.add_file_button = ttk.Button(bar, text=_("添加文件…"), command=self.add_files)
+        self.add_file_button.pack(side="left")
+        self.add_folder_button = ttk.Button(bar, text=_("添加文件夹…"), command=self.add_folder)
+        self.add_folder_button.pack(side="left", padx=(6, 0))
         ttk.Separator(bar, orient="vertical").pack(side="left", fill="y", padx=10)
-        ttk.Button(bar, text=_("修改安装位置…"), command=self.edit_dest).pack(side="left")
-        ttk.Button(bar, text=_("移除"), command=self.remove).pack(side="left", padx=(6, 0))
+        self.edit_dest_button = ttk.Button(bar, text=_("修改安装位置…"), command=self.edit_dest)
+        self.edit_dest_button.pack(side="left")
+        self.remove_button = ttk.Button(bar, text=_("移除"), command=self.remove)
+        self.remove_button.pack(side="left", padx=(6, 0))
         ttk.Separator(bar, orient="vertical").pack(side="left", fill="y", padx=10)
-        ttk.Button(bar, text=_("上移"), width=6, command=lambda: self.move(-1)).pack(side="left")
-        ttk.Button(bar, text=_("下移"), width=6,
-                   command=lambda: self.move(1)).pack(side="left", padx=(6, 0))
+        self.move_up_button = ttk.Button(bar, text=_("上移"), width=6,
+                                         command=lambda: self.move(-1))
+        self.move_up_button.pack(side="left")
+        self.move_down_button = ttk.Button(bar, text=_("下移"), width=6,
+                                           command=lambda: self.move(1))
+        self.move_down_button.pack(side="left", padx=(6, 0))
+        self._file_buttons = (self.add_file_button, self.add_folder_button,
+                              self.edit_dest_button, self.remove_button,
+                              self.move_up_button, self.move_down_button)
 
         columns = ("type", "source", "dest", "keep")
         self.tree = ttk.Treeview(parent, columns=columns, show="headings", height=11,
@@ -73,6 +94,22 @@ class FilesPage(StepPage):
         super().on_enter()
         with self.app.quiet():
             self.refresh()
+        self._sync_trimmed()
+
+    def _sync_trimmed(self) -> None:
+        """「已淘汰」的版本不允许再往"打包内容"里加东西。"""
+        retired = current_version_is_retired(self.app.project)
+        if retired:
+            self.notice.configure(text=_(
+                "当前版本已被淘汰，不能再加入文件了。\n"
+                "想要更新打包内容，请在左上角的「版本迭代 / 切换」里切换到最新的两个版本。"))
+            if not self.notice.winfo_manager():
+                self.notice.pack(fill="x", pady=(0, 8), before=self._intro)
+        else:
+            self.notice.pack_forget()
+        state = "disabled" if retired else "!disabled"
+        for button in self._file_buttons:
+            button.state([state])
 
     def flush(self) -> None:
         super().flush()

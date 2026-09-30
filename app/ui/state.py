@@ -79,7 +79,13 @@ class AppState:
 
     def adopt(self, project: Project) -> Project:
         """接管一个刚读好的工程（可以在后台线程里读好，再回主线程交过来）。"""
-        self._discard_work()          # 新工程读成功了才丢旧的，失败时旧的还在
+        old = self.project
+        # 只有真的换成了"另一份临时工作目录"才清旧的。
+        # 「版本切换」是原地重载：base_dir / work_dir 都不变，绝不能删——
+        # 否则刚写进去的 versions.json 和 versions/<其它版本> 会被一起删掉。
+        if (old is not None and old.work_dir is not None
+                and old.work_dir != project.work_dir):
+            old.cleanup()
         self.project = project
         self.dirty = False
         self.notify()

@@ -200,6 +200,12 @@ class NsiGenerator:
     def _abs(path: Path | str) -> str:
         return str(path).replace("/", "\\")
 
+    @property
+    def chinese_ui(self) -> bool:
+        """安装向导界面用不用中文（决定自动生成的复选框文案）。"""
+        return (self.p.interface.installer_language or "SimpChinese") in (
+            "SimpChinese", "TradChinese")
+
     # -- 各段落 -------------------------------------------------------------
 
     def _emit_header(self) -> None:
@@ -401,7 +407,8 @@ class NsiGenerator:
         self.blank()
 
         self.comment("------ 语言 ------")
-        self.add('!insertmacro MUI_LANGUAGE "SimpChinese"')
+        lang = self.p.interface.installer_language or "SimpChinese"
+        self.add(f'!insertmacro MUI_LANGUAGE "{lang}"')
         self.blank()
 
     def _emit_variables(self) -> None:
@@ -518,8 +525,7 @@ class NsiGenerator:
             self.blank()
 
         if desktop.enabled:
-            label = "在桌面创建 " + "{" + "shortcutName" + "}" + " 的快捷方式(&D)"
-            label = label.replace("{shortcutName}", desktop.name)
+            label = _option_label(desktop.name, self.chinese_ui, desktop=True)
             self.out.append(f'  ${{NSD_CreateCheckbox}} 12u 46u 88% 12u "{self.r(label, "shortcuts.desktop.name")}"')
             self.add("  Pop $DesktopShortcutCheck")
             self.add("  ${NSD_Check} $DesktopShortcutCheck" if desktop.default
@@ -529,7 +535,7 @@ class NsiGenerator:
             self.blank()
 
         if start_menu.enabled:
-            label = "在开始菜单创建 " + start_menu.name + " 的快捷方式(&S)"
+            label = _option_label(start_menu.name, self.chinese_ui, desktop=False)
             self.out.append(f'  ${{NSD_CreateCheckbox}} 12u 64u 88% 12u "{self.r(label, "shortcuts.startMenu.name")}"')
             self.add("  Pop $StartMenuShortcutCheck")
             self.add("  ${NSD_Check} $StartMenuShortcutCheck" if start_menu.default
@@ -773,7 +779,7 @@ class NsiGenerator:
             else:
                 target_dir = "$SMPROGRAMS"
             self.out.append(f'    CreateShortCut "{target_dir}\\{name}.lnk" '
-                            f'"$INSTDIR\\${{APP_EXE}}" "" "$INSTDIR\\${{APP_EXE}}" 0')
+                            + self._shortcut_command(start_menu, "shortcuts.startMenu"))
             if start_menu.uninstall_shortcut:
                 self.out.append(f'    CreateShortCut "{target_dir}\\卸载 {name}.lnk" '
                                 f'"$INSTDIR\\Uninstall.exe" "" "$INSTDIR\\Uninstall.exe" 0')
@@ -784,11 +790,19 @@ class NsiGenerator:
             name = self.r(desktop.name, "shortcuts.desktop.name")
             self.add("  ${If} $CreateDesktopShortcut == ${BST_CHECKED}")
             self.out.append(f'    CreateShortCut "$DESKTOP\\{name}.lnk" '
-                            f'"$INSTDIR\\${{APP_EXE}}" "" "$INSTDIR\\${{APP_EXE}}" 0')
+                            + self._shortcut_command(desktop, "shortcuts.desktop"))
             self.add("  ${EndIf}")
             self.blank()
 
         self.add("SectionEnd")
+
+    def _shortcut_command(self, entry, where: str) -> str:
+        """拼一条 CreateShortCut 的目标部分：目标 exe + 启动参数 + 图标。"""
+        args = self.r(entry.args, f"{where}.args") if entry.args.strip() else ""
+        icon = entry.icon.strip()
+        icon_path = (f"$INSTDIR\\{self.r(icon, f'{where}.icon')}"
+                     if icon else "$INSTDIR\\${APP_EXE}")
+        return f'"$INSTDIR\\${{APP_EXE}}" "{args}" "{icon_path}" 0'
 
     def _emit_integration_uninstall(self) -> None:
         """把安装时写进去的「系统集成」在卸载时清理干净。"""
@@ -903,6 +917,18 @@ class NsiGenerator:
         if uninstall.auto_close and self.p.interface.show_details:
             self.add("  SetAutoClose true")
         self.add("SectionEnd")
+
+
+def _option_label(name: str, chinese: bool, *, desktop: bool) -> str:
+    """「安装选项页」里自动生成的复选框文案（跟安装向导语言走）。"""
+    if chinese:
+        prefix = "在桌面创建 " if desktop else "在开始菜单创建 "
+        suffix = " 的快捷方式(&D)" if desktop else " 的快捷方式(&S)"
+    else:
+        prefix = ("Create a desktop shortcut for " if desktop
+                  else "Create a Start Menu shortcut for ")
+        suffix = " (&D)" if desktop else " (&S)"
+    return prefix + name + suffix
 
 
 def _join_dest(dest: str, name: str) -> str:

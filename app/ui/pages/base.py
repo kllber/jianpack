@@ -18,7 +18,7 @@ from typing import Callable
 from .. import theme
 from ... import i18n
 from ...i18n import t as _
-from ..widgets import APP_FONT, ScrollFrame, TITLE_FONT, hint_label
+from ..widgets import APP_FONT, ScrollFrame, TITLE_FONT, hint_label, keep_wheel_inside
 
 
 class StepPage(ttk.Frame):
@@ -193,6 +193,8 @@ class StepPage(ttk.Frame):
                              insertbackground=theme.c("text"))
             widget.insert("1.0", value)
             widget.pack(fill="x")
+            # 滚轮只滚这个文本框自己，别把外层可滚动页面也带着滚
+            keep_wheel_inside(widget)
             widget.bind("<KeyRelease>", lambda _e: self.app.touch())
             self._flush_actions.append(
                 lambda: setattr(obj, attr, widget.get("1.0", "end-1c")))

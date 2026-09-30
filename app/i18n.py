@@ -461,7 +461,7 @@ EN: dict[str, str] = {
 
     # -- 教程补充词条（第三轮）--
     "快速上手：4 步做出安装包": "Quick start: an installer in 4 steps",
-    "进入主界面后，按左边这 4 步走就行。下面逐步来看。": "Once inside, just follow the 4 steps on the left. Let's walk through them.",
+    "进入主界面后，按顶部这 4 步走就行。下面逐步来看。": "Once inside, follow the 4 steps at the top. Let's walk through them.",
     "设置默认安装路径、用户数据与卸载选项。「装给所有用户还是仅当前用户」在本页下方「要生成哪些版本」里勾选。": "Set the default install path, user data and uninstall options. \"For all users / current user only\" is ticked below under \"Which versions to build\".",
     "同样是这一页：「要生成哪些版本」「输出设置」「代码签名（高级）」（原来是单独一步，现在都收进来了）。": "Also on this page: \"Which versions to build\", \"Output settings\" and \"Code signing (advanced)\" (these used to be a separate step).",
     "开始打包（左下角常驻）": "Starting the build (always in the bottom-left)",
@@ -880,7 +880,7 @@ EN: dict[str, str] = {
 
     # -- 教程正文（中文原文 -> English）--
     "它能帮你做什么": "What it can do for you",
-    "快速上手：5 步做出安装包": "Quick start: an installer in 5 steps",
+    "快速上手：4 步做出安装包": "Quick start: an installer in 4 steps",
     "图片不用自己做": "Images: no prep needed",
     "实时预览：改完立刻看到效果": "Live preview: see changes instantly",
     "进阶用法": "Advanced usage",
@@ -908,10 +908,10 @@ EN: dict[str, str] = {
         "Silent install: supports /S for batch deployment",
     "体积小：官方示例的安装包约 100 KB（不含你自己的程序文件）":
         "Small: the sample installer is about 100 KB (excluding your own files)",
-    "主界面分三块：① 左边「打包步骤」，② 中间填写内容，"
-    "③ 左下方是「安装效果预览」。":
-        "The main window has three parts: ① Build Steps on the left, ② the form in the middle, "
-        "③ the Installer Preview at the lower left.",
+    "主界面：① 左上「版本迭代 / 切换」，② 右上「打包步骤」，"
+    "③ 左中「安装效果预览」，④ 左下「开始打包」。":
+        "Main window: ① Versions at the upper-left, ② Build Steps at the upper-right, "
+        "③ Installer Preview in the middle-left, ④ Start build at the lower-left.",
     "菜单在哪": "Where is the menu",
     "顶部菜单栏依次是：文件、工具、视图、帮助、首选项/设置。"
     "本教程在「帮助 → 教程」里，也可以直接按 F1 打开；"
@@ -943,17 +943,20 @@ EN: dict[str, str] = {
         "With New Project, enter a name and a location (e.g. Desktop). A folder of that name is "
         "created to hold the project file and data folders, and the whole folder can be moved, "
         "zipped or backed up freely.",
-    "进入主界面后，按左边这 5 步走就行。下面逐步来看。":
-        "In the main window, just follow the 5 steps on the left. Let's go through them.",
+    "进入主界面后，按顶部这 4 步走就行。下面逐步来看。":
+        "In the main window, follow the 4 steps at the top. Let's go through them.",
     "第 1 步：基本信息": "Step 1: Basic Info",
-    "填应用名称、版本、公司/作者、图标等。带 * 的是必填项。"
-    "图标会用在安装包、桌面快捷方式和「程序和功能」列表里。":
-        "Fill in the app name, version, company/author, icon and so on. Fields marked * are "
-        "required. The icon is used for the installer, the desktop shortcut and Apps & features.",
+    "填应用名称、公司/作者、图标等。带 * 的是必填项。"
+    "图标会用在安装包、桌面快捷方式和「程序和功能」列表里。"
+    "版本号由左上角的「版本迭代 / 切换」管理，不在这里填。":
+        "Fill in the app name, company/author, icon and so on. Fields marked * are required. "
+        "The icon is used for the installer, the desktop shortcut and Apps & features. "
+        "The version number is managed in the upper-left \"Versions\" panel, not here.",
     "第 1 步：① 应用名称是必填项；② 安装目录名建议中文软件填成英文；"
-    "③ 版本号也是必填项；④ 程序图标可以先跳过，后面再来处理。":
+    "③ 程序文件版本留空会按版本号自动补齐；④ 程序图标可以先跳过，后面再来处理。":
         "Step 1: ① App name is required; ② prefer an ASCII install folder name; "
-        "③ the version is required too; ④ the app icon can wait.",
+        "③ file version — left empty it is derived from the version number; ④ the app icon "
+        "can wait.",
     "第 2 步：打包内容": "Step 2: Payload",
     "点「添加文件…」或「添加文件夹…」，把要装到用户电脑上的东西加进来。"
     "它们在安装目录里的位置也可以在这里调整。":
@@ -1023,9 +1026,9 @@ EN: dict[str, str] = {
     "图标 256×256（含 16~256 多档）。":
         "Sizes are handled for you: header 150×57, welcome 164×314, icon 256×256 (sizes 16–256).",
 
-    "主界面左下方常驻一块「安装效果预览」。你改标题、正文、图片、快捷方式，"
+    "主界面左侧常驻一块「安装效果预览」。你改标题、正文、图片、快捷方式，"
     "它都会跟着变，不用打完包再装一遍才知道长什么样。":
-        "The Installer Preview sits at the lower left. As you edit titles, text, images and "
+        "The Installer Preview sits on the left. As you edit titles, text, images and "
         "shortcuts it updates, so you don't have to build and install to see the result.",
     "① 左下方是实时预览；② 下拉框可以切换要看哪一页；"
     "③ 在右边改动（例如协议文字），左边的预览立刻跟着变。":
@@ -1244,6 +1247,18 @@ EN: dict[str, str] = {
     "工程文件用的是它自己的图标，和软件图标不一样，方便一眼区分工程文件和程序。":
         "Project files use their own icon, different from the app icon, so you can tell a project "
         "file from a program at a glance.",
+    "版本迭代：一个工程管多个版本": "Versions: several versions in one project",
+    "不用每发一版就新建工程：在左上角「版本迭代 / 切换」里点「新建版本」，"
+    "当前状态就会被存档；以后随时能一键切回旧版本，切换前会先保存当前工程。"
+    "刚新建的空工程会先只显示这个面板，创建第一个版本后完整界面才会出现。":
+        "You don't have to create a new project for every release: click \"New version\" in the "
+        "upper-left \"Versions\" panel and the current state is archived; you can switch back to an "
+        "older version at any time, and switching saves the current project first. A brand-new "
+        "empty project shows only this panel until you create the first version.",
+    "固定只保留最近 2 版的程序文件（锁定的版本除外），"
+    "更早的版本只留配置（可切回去看，但不能直接打包）。":
+        "Only the last 2 versions keep their program files (unless locked); older versions keep "
+        "the config only (you can switch back to view them, but not build them directly).",
     "安装包输出到哪": "Where the installer goes",
     "默认输出到桌面；在第 3 步「输出位置」里填一个目录就按那个目录走，"
     "留空又恢复成桌面。":
@@ -1469,4 +1484,383 @@ EN: dict[str, str] = {
     "{where}: 读不了 {file}：{exc}": "{where}: cannot read {file}: {exc}",
     "{where}: 未知的占位符 {{{key}}}（可用：{known}）":
         "{where}: unknown placeholder {{{key}}} (available: {known})",
+
+    # -- 安装向导语言 / 打包面板 / 缓存 / 校验（本轮补充）--
+    "安装向导语言": "Installer language",
+    "安装向导自带的按钮、提示用哪种语言。"
+    "第 1 步的「语言」只管安装包 exe 属性里列出的语言，两者不一样。":
+        "Which language the installer's built-in buttons and prompts use. The \"Languages\" "
+        "option in step 1 only controls the languages listed in the installer EXE's "
+        "properties — they are different things.",
+    "校验没通过：发现 {n} 个问题，详情见左侧日志。":
+        "Validation failed: {n} problem(s). See the log on the left.",
+    "保存工程失败": "Saving the project failed",
+    "另存为": "Save As",
+    "打开缓存目录": "Open cache folder",
+    "打不开缓存目录": "Cannot open the cache folder",
+    "当前缓存位置：{path}\n其中临时工程 {n} 个，约 {size}。":
+        "Current cache location: {path}\nContains {n} temporary project(s), about {size}.",
+    "（另有 {n} 条）": "({n} more)",
+    "有 {n} 条路径接近 Windows 的 260 字符上限，"
+    "安装 / 解压时可能失败，建议把工程放到更短的路径下：\n"
+    "{examples}{more}":
+        "{n} path(s) are close to Windows' 260-character limit and may fail to install or "
+        "extract. Consider moving the project to a shorter path:\n{examples}{more}",
+
+    "{where}.lcid: 期望整数，当前是 {value}":
+        "{where}.lcid: expected an integer, got {value}",
+    '{where}.root: 只能是 "HKCU" 或 "HKLM"':
+        '{where}.root: must be "HKCU" or "HKLM"',
+    "{where}.type: 只能是 REG_SZ / REG_EXPAND_SZ / REG_DWORD":
+        "{where}.type: must be REG_SZ / REG_EXPAND_SZ / REG_DWORD",
+    "{where}.{key}: 期望数组": "{where}.{key}: expected an array",
+
+    # -- 快捷方式自定义 / 文件关联提示 --
+    "启动参数": "Launch arguments",
+    "传给主程序的命令行参数，留空则不带参数":
+        "Command-line arguments passed to the main program; leave empty for none",
+    "图标文件": "Icon file",
+    "安装目录内的相对路径，例如 assets\\app.ico；留空用主程序图标":
+        "Relative path inside the install folder, e.g. assets\\app.ico; leave empty to use "
+        "the main program's icon",
+    "Windows 10/11 保护用户已选的默认程序，勾选只是把它注册为可选项，"
+    "不一定会立刻成为默认":
+        "Windows 10/11 protects the user's chosen default app; this only registers the "
+        "program as a candidate — it may not become the default right away.",
+
+    # -- 版本迭代 / 切换 --
+    "版本迭代 / 切换": "Versions",
+    "版本": "Version",
+    "当前": "current",
+    "空": "empty",
+    "占用": "Size",
+    "已淘汰": "retired",
+    "日期格式": "Date format",
+    "年/月/日": "Year/Month/Day",
+    "月/日/年": "Month/Day/Year",
+    "日/月/年": "Day/Month/Year",
+    "只影响版本列表里日期的显示顺序（例如 26/09/30）。":
+        "Only affects the date order shown in the version list (e.g. 26/09/30).",
+    "日期": "Date",
+    "状态": "State",
+    "备注": "Note",
+    "含文件": "with files",
+    "仅配置": "config only",
+    "新建版本…": "New version…",
+    "新建版本": "New version",
+    "切换到选中版": "Switch to selected",
+    "重命名…": "Rename…",
+    "重命名版本": "Rename version",
+    "锁定": "Lock",
+    "解锁": "Unlock",
+    "保留完整文件：最近": "Keep full files for the last",
+    "版": "ver.",
+    "打开工程后，可以在这里把当前状态存成一个版本，之后一键切回。":
+        "Once a project is open, you can save its current state as a version here and "
+        "switch back with one click.",
+    "切换版本前会先保存当前工程；新建版本会先把当前版本存档。\n"
+    "只保留最近 {keep} 版的程序文件，更早的版本只留配置（可切回查看、不可直接打包）。":
+        "Switching saves the current project first; creating a version archives the current "
+        "one.\nOnly the last {keep} versions keep their program files; older ones keep the "
+        "config only (you can switch back to view it, but not build it directly).",
+    "演示项目是只读的，不能做版本操作。":
+        "The demo project is read-only, so version operations are disabled.",
+    "新建版本会先把当前版本存档到工程里，然后进入新版本。\n\n"
+    "请注意：\n"
+    "• 会先保存当前工程；\n"
+    "• 当前版本的配置、图标**和程序文件**都会一起存档（占用额外空间）；\n"
+    "• 只保留最近 {keep} 版的程序文件，更早的版本会自动「已淘汰」（不能再加文件）；\n"
+    "• 存档后，新版本的「打包内容」会**清空**，请重新添加本版本的程序文件。\n\n"
+    "确定新建版本吗？":
+        "Creating a version first archives the current version into the project, then starts "
+        "a new one.\n\nPlease note:\n"
+        "• the current project is saved first;\n"
+        "• the current version's config, icons **and program files** are archived together "
+        "(extra disk space);\n"
+        "• only the last {keep} versions keep their program files; older ones become "
+        "\"config only\";\n"
+        "• after that, remember to point the payload at the new version's files.\n\n"
+        "Create a new version?",
+    "版本号": "Version",
+    "新版本的显示版本，例如 1.1.0": "The new version number, e.g. 1.1.0",
+    "这一版改了什么（可留空）": "What changed in this version (optional)",
+    "新建版本失败": "Creating the version failed",
+    "已进入新版本 {name}。\n\n「打包内容」已清空，请在第 2 步添加"
+    "本版本要打包的文件，然后再打包。":
+        "Now on version {name}.\n\n\"Payload\" has been cleared — add this version's files in "
+        "step 2 before building.",
+    "切换版本": "Switch version",
+    "要切换到版本「{name}」吗？\n\n当前版本会先被存档到工程里。{note}":
+        "Switch to version \"{name}\"?\n\nThe current version will be archived into the "
+        "project first.{note}",
+    "\n\n注意：这个版本只保留了配置，没有程序文件；切换后打包会沿用当前的程序文件，"
+    "请确认无误再打包。":
+        "\n\nNote: this version only kept its config, not its program files; after switching, "
+        "building will reuse the current program files — please double-check before building.",
+    "切换版本失败": "Switching the version failed",
+    "\n\n注意：这个版本已被淘汰（程序文件已清理）；切换后「打包内容」会清空，"
+    "并且不能再往里加文件——请在想继续开发时切回最新的两个版本。":
+        "\n\nNote: this version has been retired (its program files were cleaned up). After "
+        "switching, \"Payload\" is cleared and no new files can be added — switch back to one of "
+        "the latest two versions to keep developing.",
+    "已切换（已淘汰）": "Switched (retired)",
+    "已切到版本「{name}」，但这个版本已被淘汰，不能再添加文件。\n\n"
+    "想继续更新，请切换到最新的两个版本。":
+        "Switched to version \"{name}\", but it has been retired and can no longer accept "
+        "files.\n\nTo keep updating, switch to one of the latest two versions.",
+    "已切换（仅配置）": "Switched (config only)",
+    "已切到版本「{name}」，但这个版本没有程序文件。\n\n"
+    "请在第 2 步重新指定打包内容，或切回带程序文件的版本。":
+        "Switched to version \"{name}\", but it has no program files.\n\n"
+        "Point the payload at something again in step 2, or switch back to a version that "
+        "has program files.",
+    "确定删除版本「{name}」吗？\n\n它的存档（配置、图标和程序文件）都会被一起删掉，无法恢复。":
+        "Delete version \"{name}\"?\n\nIts archive (config, icons and program files) will be "
+        "deleted with it and cannot be recovered.",
+    "删除失败": "Deleting failed",
+    "删除版本": "Delete version",
+    "修改保留数量": "Change how many versions to keep",
+    "把「保留完整文件」的版本数改成 {keep} 吗？\n\n"
+    "超出数量的旧版本会删除程序文件，只保留配置（配置不会丢）。":
+        "Keep full program files for the last {keep} versions?\n\nOlder versions will have "
+        "their program files removed and keep the config only (the config is not lost).",
+    "已精简": "Trimmed",
+    "已把 {n} 个较旧版本的程序文件删除，只保留配置。":
+        "Removed the program files of {n} older version(s); their config is kept.",
+    "需要先保存": "Save first",
+    "切换版本前需要先保存当前工程。\n\n现在保存并切换吗？\n（选择「否」将取消切换）":
+        "The current project must be saved before switching versions.\n\nSave and switch now?\n"
+        "(Choosing \"No\" cancels the switch.)",
+    "新建版本前需要先保存当前工程。\n\n现在保存并新建吗？\n（选择「否」将取消）":
+        "The current project must be saved before creating a new version.\n\nSave and create "
+        "now?\n(Choosing \"No\" cancels.)",
+    "版本操作失败": "Version operation failed",
+    "保存版本清单失败：{exc}": "Saving the version list failed: {exc}",
+    "找不到这个版本。": "This version was not found.",
+    "版本「{name}」的存档已经不存在了，无法切换。":
+        "The archive of version \"{name}\" no longer exists; cannot switch.",
+    "不能删除当前正在编辑的版本。":
+        "The version you are currently editing cannot be deleted.",
+
+    # -- 空工程「创建版本」流程 / 版本号移入版本面板 --
+    "版本迭代 / 创建": "Versions / Create",
+    "这个工程还没有任何版本": "This project has no versions yet",
+    "请在左上角「版本迭代 / 创建」里点「新建版本…」，"
+    "创建第一个版本后，完整界面就会出现。":
+        "Click \"New version…\" in the upper-left \"Versions / Create\" panel; the full "
+        "interface appears once the first version is created.",
+    "创建版本": "Create version",
+    "这个工程还没有任何版本。\n\n"
+    "点「确定」后创建第一个版本（版本号可在下一步填写），之后完整界面就会出现。\n\n"
+    "确定创建吗？":
+        "This project has no versions yet.\n\n"
+        "Click OK to create the first version (you can fill in the version number next); "
+        "the full interface will then appear.\n\nCreate it now?",
+    "已创建版本": "Version created",
+    "已创建版本 {name}，现在可以填写第 1 步的其它信息并添加打包内容了。":
+        "Version {name} created. You can now fill in the rest of step 1 and add your files.",
+    "这个工程还没有任何版本。点「新建版本…」创建第一个版本，填好版本号后，完整界面就会出现。":
+        "This project has no versions yet. Click \"New version…\" to create the first one; "
+        "the full interface appears after you fill in the version number.",
+    "切换 / 新建版本前会先保存工程。\n"
+    "只保留最近 {keep} 版的程序文件，更早的版本「已淘汰」（不能再加文件）；"
+    "锁定的版本除外。":
+        "Switching / creating a version saves the project first.\n"
+        "Only the last {keep} versions keep their program files; older ones are \"retired\" "
+        "(they can no longer accept files); locked versions are exempt.",
+    "写进 exe 属性，必须是 a.b.c.d 四段数字。留空则按版本号自动补齐。"
+    "版本号在左上角的「版本迭代 / 切换」里管理。":
+        "Written into the EXE properties; must be four numeric parts a.b.c.d. Left empty it is "
+        "derived from the version number. The version number itself is managed in the "
+        "upper-left \"Versions\" panel.",
+    "当前版本已被淘汰，不能再加入文件了。\n"
+    "想要更新打包内容，请在左上角的「版本迭代 / 切换」里切换到最新的两个版本。":
+        "This version has been retired and can no longer accept files.\n"
+        "To update the payload, switch to one of the latest two versions in the upper-left "
+        "\"Versions\" panel.",
+    "当前版本已被淘汰，不能再打包了。\n"
+    "想继续更新，请在左上角的「版本迭代 / 切换」里"
+    "切换到最新的两个版本。":
+        "This version has been retired and can no longer be built.\n"
+        "To keep updating, switch to one of the latest two versions in the upper-left "
+        "\"Versions\" panel.",
+    "版本号重复": "Duplicate version number",
+    "已经有一个 v{version} 的版本了，请换一个版本号。":
+        "A version v{version} already exists — please use a different version number.",
+    "打开版本：": "Open version: ",
+    "解锁后会被淘汰": "Unlocking will retire it",
+    "正在新建版本…": "Creating a new version…",
+    "正在切换版本…": "Switching version…",
+    "正在删除版本…": "Deleting version…",
+    "正在更新版本…": "Updating version…",
+    "解锁失败": "Unlocking failed",
+    "当前版本正常情况下已被淘汰，如果现在解锁会导致当前这个版本"
+    "不再受到保护，转为淘汰状态。\n\n确定解锁吗？":
+        "This version would normally be retired. Unlocking it now will remove its protection "
+        "and turn it into a retired version.\n\nUnlock anyway?",
+
+    # -- 教程正文（6 章重构）--
+    "认识简包装": "Meet JianPack",
+    "简包装（JianPack）是一款面向新手的 Windows 安装包制作工具：把「一个文件夹里做好的程序」做成一个安装包，发给别人双击就能装，不用解压、不用自己在一堆文件里找 exe。": "JianPack is a beginner-friendly Windows installer builder: it turns \"a ready-made program in a folder\" into an installer. Send it to someone and they double-click to install — no unzipping, no hunting for the exe.",
+    "它底层用 NSIS 作为打包引擎，生成出来的是原生安装程序，目标电脑不需要安装 .NET、Python 或任何运行时。界面中英双语，操作方式是「填几个字段 + 点几下」，不用写一行脚本。": "It uses NSIS as the packaging engine, and the result is a native installer — the target PC needs no .NET, Python or any runtime. The interface is bilingual (Chinese/English), and everything is done by filling in a few fields and clicking, with no script to write.",
+    "主界面总览：① 版本迭代 / 切换；② 打包步骤（下面就是编辑区）；③ 安装效果预览；④ 开始打包；⑤ 底部状态栏。": "Main window: ① Versions; ② Build Steps (the editor is right below); ③ Installer Preview; ④ Start Build; ⑤ the status bar at the bottom.",
+    "主界面各板块是干什么的": "What each part of the main window does",
+    "① 版本迭代 / 切换（左上）：把一个工程保存成多个版本，随时一键切回；当前版本整行蓝色高亮。": "① Versions (upper-left): save one project as multiple versions and switch back anytime; the current version is highlighted in blue.",
+    "② 打包步骤（右上）：4 步向导的目录，点一下跳到对应步骤；最右边是「上一步 / 下一步」，下方就是编辑区。": "② Build Steps (upper-right): the table of contents of the 4-step wizard; click one to jump to that step. Back/Next are at the far right, and the editor is below.",
+    "③ 安装效果预览（左中）：按真实版式画出安装向导长什么样，随编辑内容实时变化。": "③ Installer Preview (middle-left): draws what the installer will look like in the real layout, updating live as you edit.",
+    "④ 开始打包（左下）：校验工程、只生成脚本、开始打包、打开输出目录，以及实时日志。": "④ Start Build (lower-left): validate, generate the script only, build, open the output folder, plus a live log.",
+    "⑤ 状态栏（最底部）：显示工程文件路径，以及「已保存 / 有未保存的改动」。": "⑤ Status bar (very bottom): the project file path and whether there are unsaved changes.",
+    "顶部菜单栏": "The top menu bar",
+    "菜单栏依次是：文件、工具、视图、帮助，最右边是「首选项/设置」。本教程在「帮助 → 教程」里，也可以直接按 F1 打开。": "The menu bar is: File, Tools, View, Help, and Preferences/Settings at the far right. This tutorial lives under Help → Tutorial, and F1 also opens it.",
+    "「帮助 → 教程」打开本教程。教程是独立窗口，不挡主界面，可以边看边操作。": "Help → Tutorial opens this guide. It is a separate window that does not block the main window, so you can read and work at the same time.",
+    "一个工程就是「一个文件」": "A project is a single file",
+    "新建的工程只有一个文件：「我的软件.jianpack」。程序图标、要打包的文件、界面设置、历史版本全都装在这一个文件里。": "A new project is just one file: \"MySoftware.jianpack\". The icon, the files to package, the interface settings and the version history are all stored in this one file.",
+    "一个工程 = 一个文件：里面装着工程配置、图标、要打包的文件和历史版本。": "One project = one file: it holds the project settings, the icon, the files to package and the version history.",
+    "打包版会自动把 .jianpack 关联到本软件，双击工程文件就能打开": "The packaged build automatically associates .jianpack with this app, so double-clicking a project file opens it",
+    "第一次打开软件会先弹一个欢迎页，一句话说明软件作用，并提醒教程在哪。点「打开教程」就能看这份图文教程；不想再看到它，勾上「不再显示」即可。": "On first launch a welcome page appears, saying in one line what the app does and pointing to the tutorial. Click \"Open Tutorial\" to read this guide; to stop seeing it, tick \"Don't show again\".",
+    "特色与局限": "Strengths & limits",
+    "和同类工具（Inno Setup Compiler、手写 NSIS 脚本、InstallShield 等）相比，简包装走的是「够用、好上手」的路线。先看它强在哪，再说不强在哪。": "Compared with similar tools (Inno Setup Compiler, hand-written NSIS scripts, InstallShield, …), JianPack takes the \"good enough and easy to pick up\" route. First its strengths, then where it falls short.",
+    "它的特色": "Its strengths",
+    "简包装": "JianPack",
+    "上手": "Ease",
+    "填字段 + 点按钮": "Fill fields + click",
+    "不用写脚本": "No scripting",
+    "界面": "Interface",
+    "中英双语": "Bilingual",
+    "含内置图文教程": "Built-in illustrated tutorial",
+    "运行": "Runtime",
+    "绿色便携": "Portable",
+    "自备引擎、零依赖": "Bundled engine, no deps",
+    "单文件 .jianpack": "Single .jianpack file",
+    "一个文件带走全部": "One file carries everything",
+    "内置版本迭代": "Built-in versions",
+    "一个工程管多版": "Many versions per project",
+    "预览": "Preview",
+    "实时仿真预览": "Live simulated preview",
+    "改完立刻看到": "See changes instantly",
+    "不用写脚本：所有功能都是界面上的字段和开关，新手也能做出规范安装包。": "No scripting: every feature is a field or a switch on the screen, so even beginners can produce a tidy installer.",
+    "中英双语：界面、教程都有中文和英文两套（欢迎页左下角「中/en」可切换）。": "Bilingual: the interface and the tutorial ship in both Chinese and English (switch with the \"中/en\" button on the welcome page).",
+    "绿色便携、零依赖：整个软件就是一个文件夹，内嵌便携版 NSIS，拷到别的电脑不用装任何东西；生成出来的安装包也不需要运行时。": "Portable and dependency-free: the whole app is one folder with a bundled portable NSIS; copy it to another PC and nothing needs installing. The generated installer needs no runtime either.",
+    "工程是单文件：图标、程序文件、界面设置、历史版本都在一个 .jianpack 里。": "Single-file project: the icon, program files, interface settings and version history all live in one .jianpack.",
+    "版本迭代：同一个工程里保存多个版本，随时一键切换（同类工具里少见）。": "Versioning: keep multiple versions in one project and switch with one click (rare among similar tools).",
+    "实时预览：左侧按真实版式画出安装向导各个页面，改文案、换图片立刻看到。": "Live preview: the left panel draws each installer page in the real layout; edit the text or swap an image and see it at once.",
+    "图片自动处理：任意格式图片拖进去裁剪，自动转成安装向导要求的 BMP 和多尺寸 ICO。": "Automatic images: crop any image format and it is converted to the BMP and multi-size ICO the installer needs.",
+    "系统集成：文件关联、URL 协议、自定义注册表项，安装时写入、卸载时清理。": "System integration: file associations, URL protocols and custom registry entries, written on install and cleaned up on uninstall.",
+    "开机自启、代码签名、两种安装模式一次生成、静默安装 /S，都是勾选即可。": "Autostart on boot, code signing, generating both install modes at once and silent install /S — all just a checkbox.",
+    "目前还不及同类软件的地方": "Where it currently falls short",
+    "不支持自定义脚本：Inno Setup 可以写 Pascal 脚本来实现复杂逻辑，简包装只能做界面上提供的功能。": "No custom scripting: Inno Setup lets you write Pascal scripts for complex logic; JianPack only does what the UI offers.",
+    "没有增量升级 / 补丁 / 自动更新：每次产出的都是完整安装包，要做「从旧版升级到新版」需要自己安排。": "No incremental upgrade / patch / auto-update: every build is a full installer, so \"upgrade from an old version\" must be arranged by you.",
+    "不能自由增删安装页面：页面种类和顺序基本固定（欢迎、协议、日志、位置、选项、进度、完成）。": "No free-form pages: the set and order of installer pages is basically fixed (welcome, license, changelog, location, options, progress, finish).",
+    "不支持多组件安装：没有「典型 / 自定义安装，勾选要装哪些组件」这一套。": "No multi-component install: there is no \"typical / custom, tick which components to install\".",
+    "只面向 Windows：生成的安装包运行在 Windows 10 / 11 上。": "Windows only: the installer runs on Windows 10 / 11.",
+    "代码签名需要自备证书：没有证书时，Windows SmartScreen 会提示「未知发布者」。": "Code signing needs your own certificate: without one, Windows SmartScreen shows \"Unknown publisher\".",
+    "安装向导语言是整体切换：不会按系统区域自动挑语言，也没有多语言资源包。": "The installer language is a whole-UI switch: it will not auto-pick a language from the system locale, and there are no multi-language resource packs.",
+    "超长文本有硬上限：NSIS 单个字符串变量约 1024 字符；本软件已用「逐行写入控件」的方式避开日志截断，但极端超长内容仍可能受影响。": "A hard limit on very long text: an NSIS string variable holds about 1024 characters; this app avoids truncation by writing line by line into the control, but extreme content may still be affected.",
+    "适合谁用": "Who it is for",
+    "想快速把一个小工具、绿色软件打包成安装包的个人或小团队；": "Individuals or small teams who want to package a small tool or a portable app into an installer quickly;",
+    "需要中文界面、中文安装向导、免提权安装的场景；": "Cases that need a Chinese interface, a Chinese installer and privilege-free install;",
+    "不需要脚本级定制、复杂升级或多组件部署的项目。": "Projects that do not need script-level customization, complex upgrades or multi-component deployment.",
+    "如果你需要脚本级定制、增量升级或多语言资源包，Inno Setup Compiler 会更合适；两者并不冲突，可以按项目规模来选。": "If you need script-level customization, incremental upgrades or multi-language resource packs, Inno Setup Compiler will fit better; the two are not in conflict — pick by project size.",
+    "快速上手": "Quick start",
+    "这一章带你从打开软件一直走到打包完成。照着顺序做，就能得到一个能用的安装包。": "This chapter walks you from opening the app all the way to a finished installer. Follow along and you will get a working installer.",
+    "第一次用可以先双击「演示测试项目」——那是一个完整的示例工程，可以随便改、试试预览和打包，但它是只读的、不能保存。想正式做工程，点「新建工程」填好名称和位置即可：只会创建「一个工程文件」。": "First-timers can double-click \"Demo Project\" — a complete sample project you can freely edit and try preview/build with, but it is read-only and cannot be saved. To start your own, click \"New Project\" and fill in a name and location: only a single project file is created.",
+    "点「新建工程」，填工程名称和存放位置，确定。": "Click \"New Project\", enter a project name and location, then confirm.",
+    "第 1 步「基本信息」：填应用名称（必填）、安装目录名、程序文件版本、公司/作者、版权等；程序图标可以先跳过。": "Step 1 \"Basic Info\": fill in the app name (required), install folder name, file version, company/author, copyright, etc.; the icon can wait.",
+    "第 2 步「打包内容」：点「添加文件…」或「添加文件夹…」把要装的东西加进来，在下面选好主程序（留空会自动识别根目录里唯一的 exe）。": "Step 2 \"Payload\": click \"Add Files…\" or \"Add Folder…\" to add what should be installed, then pick the main program below (empty auto-detects the only exe at the root).",
+    "第 3 步「安装设置」：选安装位置；在「要生成哪些版本」里勾选为所有用户 / 仅当前用户；在「输出设置」里选安装包输出到哪（留空 = 桌面）。": "Step 3 \"Install Settings\": choose the install location; tick all-users / current-user under \"Variants to build\"; choose where the installer goes under \"Output\" (empty = Desktop).",
+    "第 4 步「安装界面」：改各页面的文案和图片（不做任何修改也能打包）。": "Step 4 \"Installer UI\": edit the text and images of each page (you can build without changing anything).",
+    "左下角「开始打包」：先点「校验工程」检查有没有问题，再点「开始打包」。": "\"Start Build\" at the lower-left: click \"Validate Project\" to check for problems, then click \"Start Build\".",
+    "完成后点「打开输出目录」，就能拿到安装包。": "When it finishes, click \"Open Output Folder\" to get the installer.",
+    "首次打包需要本机有 NSIS 编译器；用「文件夹版」分发包时已内嵌便携版 NSIS，不用另外安装。没有内嵌时，程序会提示用 winget install NSIS.NSIS 安装。": "The first build needs an NSIS compiler on this PC; the \"folder\" distribution already bundles a portable NSIS, so nothing extra is required. Without a bundled one, the app tells you to install it with winget install NSIS.NSIS.",
+    "填应用名称、公司/作者、图标等，带 * 的是必填项。版本号由左上角的「版本迭代 / 切换」管理，不在这里填。": "Fill in the app name, company/author, icon and so on; fields marked * are required. The version number is managed in the upper-left \"Versions\" panel, not here.",
+    "把要装到用户电脑上的文件/文件夹加进来，还能调整它们在安装目录里的位置。文件夹条目默认保留自己的名字，也可以在弹窗里改成「只放内容」。": "Add the files/folders to install and adjust where they land in the install folder. Folder entries keep their own name by default, and can be changed to \"contents only\" in the dialog.",
+    "设置默认安装路径、用户数据与卸载选项；「装给所有用户还是仅当前用户」在下方的「要生成哪些版本」里勾选。": "Set the default install path, user data and uninstall options; whether it installs for all users or just the current user is ticked under \"Variants to build\" below.",
+    "安装向导每一页的文案和图片都能改。上面选子标签（欢迎页 / 许可协议 / 更新日志 / 安装选项页 / 完成页），下面写文字、换图片。": "Every page of the installer can be customized. Pick a tab above (Welcome / License / Changelog / Install Options / Finish) and edit the text and images below.",
+    "左下角一直有「开始打包」面板。先在第 3 步选好要生成哪些版本和输出位置，再点「开始打包」，进度和日志就显示在下面。「校验工程」只检查配置，「只生成脚本」只生成 .nsi 不编译。": "The \"Start Build\" panel is always at the lower-left. Choose the variants and output location in step 3, then click \"Start Build\" — progress and the log appear below. \"Validate Project\" only checks the config; \"Script Only\" generates the .nsi without compiling.",
+    "打包完成后点「打开输出目录」即可拿到安装包。": "When the build finishes, click \"Open Output Folder\" to get the installer.",
+    "生成出来的安装包，各页大致就是这个样子。": "The generated installer looks roughly like this on each page.",
+    "这一章把软件里所有的可选功能讲全，方便你按需定制，不遗漏任何能力。": "This chapter covers every optional feature, so you can tailor the app without missing anything.",
+    "在左上角「版本迭代 / 切换」里点「新建版本」，当前状态（配置、图标和程序文件）会被存档；以后随时能一键切回旧版本，切换前会先保存当前工程。刚新建的空工程会先只显示这个面板，创建第一个版本后完整界面才出现。": "In the upper-left \"Versions\" panel, click \"New version\" and the current state (config, icons and program files) is archived; you can switch back to an old version anytime, and switching saves the current project first. A brand-new empty project shows only this panel until you create the first version, after which the full interface appears.",
+    "只保留最近 2 版（含当前版本）的程序文件；更早的版本会被「淘汰」，只留配置。": "Only the last 2 versions (including the current one) keep their program files; older ones are \"retired\" and keep the config only.",
+    "锁定的版本不会被淘汰，而且它照样占用「保留」名额。": "A locked version is never retired, and it still takes up a \"keep\" slot.",
+    "「已淘汰」的版本：能切回去查看，但不能加文件、不能打包，也不能再上锁。": "A \"retired\" version: you can switch back to view it, but you cannot add files, build it, or lock it again.",
+    "解锁一个「本来会被淘汰」的版本时，会先询问，确定后立即淘汰（清掉程序文件）。": "Unlocking a version that \"would be retired\" asks for confirmation first, then retires it immediately (removing its program files).",
+    "版本号不能重复；「新建版本」会自动给一个没被占用的默认版本号。": "Version numbers cannot repeat; \"New version\" picks an unused default for you.",
+    "列表固定按版本号从大到小排（1.0.10 比 1.0.9 大），当前版本整行蓝色高亮并带 ▶。": "The list is always sorted by version number, newest first (1.0.10 > 1.0.9); the current version is highlighted in blue with a ▶.",
+    "窗口标题里的项目名只跟 .jianpack 文件名走，后面显示的才是当前版本号。": "The project name in the window title follows the .jianpack file name only; the version number shown after it is the current one.",
+    "新建版本后，新版本的「打包内容」会清空，需要重新添加本版本的文件——这样才不会把上一版的文件当成这一版。": "After creating a version, the new version's \"Payload\" is cleared, so add this version's files again — this avoids treating the previous version's files as this one's.",
+    "两种安装模式与静默安装": "Two install modes and silent install",
+    "Program Files": "Program Files",
+    "%LOCALAPPDATA%\\Programs": "%LOCALAPPDATA%\\Programs",
+    "HKLM": "HKLM",
+    "HKCU": "HKCU",
+    "在第 3 步「要生成哪些版本」里勾选这次要生成哪些（两种都勾也行）。勾了多个时，文件名会自动加 -PerMachine / -PerUser 后缀，避免互相覆盖。": "Tick which variants to build in step 3 \"Variants to build\" (both is fine). When more than one is ticked, the file name gets a -PerMachine / -PerUser suffix to avoid overwriting.",
+    "生成的安装包支持 NSIS 标准的静默参数，安装不弹界面；卸载程序同样支持，方便批量部署：": "The generated installer supports the standard NSIS silent switch, so install runs with no UI; the uninstaller supports it too, which helps with batch deployment:",
+    "系统集成（高级抽屉）": "System integration (advanced drawer)",
+    "第 3 步底部「系统集成（高级）」默认收起，展开后可以配置三类动作，安装时写入、卸载时自动清理：": "The \"System integration (advanced)\" drawer at the bottom of step 3 is collapsed by default; expand it to configure three kinds of actions, written on install and cleaned up on uninstall:",
+    "文件类型关联：把某个扩展名（例如 .myext）关联到本程序，可以设描述、图标，以及是否尝试设为默认。": "File association: associate an extension (e.g. .myext) with this program; you can set a description, an icon and whether to try to make it the default.",
+    "URL 协议：注册 myapp:// 这类协议，让别人点链接就能调起你的程序。": "URL protocol: register a scheme like myapp:// so clicking a link launches your program.",
+    "自定义注册表项：HKCU / HKLM，REG_SZ / REG_EXPAND_SZ / REG_DWORD，安装写入、卸载删除。": "Custom registry entries: HKCU / HKLM, REG_SZ / REG_EXPAND_SZ / REG_DWORD, written on install and removed on uninstall.",
+    "Windows 10/11 保护用户已选的默认程序，勾「设为默认」只是把它注册为可选项，不一定会立刻成为默认。": "Windows 10/11 protects the user's chosen default app; ticking \"set as default\" only registers the program as a candidate — it may not become the default right away.",
+    "完成页的「开机自启」": "\"Autostart on boot\" on the Finish page",
+    "第 4 步「完成页」可以提供一个「开机自启」复选框，还能设成默认勾选。用户勾选后，安装向导会往注册表的 Run 键写一条启动项，卸载时自动删除。": "The Finish page in step 4 can offer an \"Autostart on boot\" checkbox, optionally checked by default. When ticked, the installer writes a startup entry to the registry Run key, removed automatically on uninstall.",
+    "代码签名（Authenticode）": "Code signing (Authenticode)",
+    "第 3 步「代码签名（高级）」默认收起。展开后勾选「打包后自动签名」，填证书（.pfx / .p12）、密码和时间戳服务器；signtool 路径留空会自动查找。打包成功后会自动签名。": "The \"Code signing (advanced)\" drawer in step 3 is collapsed by default. Expand it, tick \"Sign automatically after building\" and fill in the certificate (.pfx / .p12), password and timestamp server; leave the signtool path empty to auto-detect. The installer is signed automatically on success.",
+    "证书密码是以明文保存在工程文件里的，请自行妥善保管；没有证书时，Windows SmartScreen 会提示「未知发布者」。": "The certificate password is stored in the project file in plain text — keep it safe. Without a certificate, Windows SmartScreen shows \"Unknown publisher\".",
+    "快捷方式的启动参数与图标": "Shortcut launch arguments and icon",
+    "第 4 步「安装选项页」里可以设置桌面 / 开始菜单快捷方式：名称、启动参数和图标。图标填安装目录内的相对路径（例如 assets\\app.ico），留空则用主程序图标。": "In step 4 \"Install Options\" you can set the desktop / Start menu shortcuts: name, launch arguments and icon. The icon is a path relative to the install folder (e.g. assets\\app.ico); empty uses the main program's icon.",
+    "NSIS 的快捷方式不支持自定义「起始位置 / 工作目录」，需要的话请在程序里自己处理。": "NSIS shortcuts do not support a custom \"start in / working directory\"; handle that in your program if needed.",
+    "{appName} {appVersion} {appPublisher} {appHomepage} {installMode} 这类占位符，在打包时由本软件替换成实际内容。": "Placeholders such as {appName} {appVersion} {appPublisher} {appHomepage} {installMode} are replaced by this app at build time.",
+    "$INSTDIR $APPDATA $PROGRAMFILES64 这类写法会原样保留，安装时由 NSIS 替换成真实路径。": "$INSTDIR $APPDATA $PROGRAMFILES64 and the like are kept verbatim and replaced by NSIS with real paths at install time.",
+    "安装向导语言 与 程序属性语言": "Installer language vs. program-properties languages",
+    "第 4 步「安装向导语言」：决定安装向导自带的按钮和提示用哪种语言。": "Step 4 \"Installer language\": which language the installer's built-in buttons and prompts use.",
+    "第 1 步「程序属性 → 语言」：决定安装包 exe「属性 → 详细信息」里列出哪些语言，可以多选，也能自己加自定义语言（名称 + 语言 ID）。": "Step 1 \"Program properties → Languages\": which languages are listed in the installer EXE's \"Properties → Details\"; multiple can be selected and you can add your own (name + language ID).",
+    "两者互相独立，可以不一样。": "The two are independent and can differ.",
+    "实时预览": "Live preview",
+    "主界面左侧常驻「安装效果预览」。你改标题、正文、图片、快捷方式，它都会跟着变，不用打完包再装一遍才知道长什么样。": "The \"Installer Preview\" is always on the left. Change a title, body text, image or shortcut and it updates — no need to build and install just to see the result.",
+    "① 下拉框可以切换要看哪一页；② 左下是实时预览；③ 在右边改动（例如协议文字），左边的预览立刻跟着变。": "① use the dropdown to switch pages; ② the live preview at the lower-left; ③ edit on the right (e.g. the license text) and the preview changes at once.",
+    "预览是按真实版式画的示意图，字体和中文换行位置可能与最终安装程序差一两行": "The preview is a mock-up drawn in the real layout; fonts and Chinese line breaks may differ from the final installer by a line or two",
+    "输出位置与缓存": "Output location and cache",
+    "安装包默认输出到桌面（跟随 OneDrive 之类的重定向）；在第 3 步「输出设置 → 输出位置」里填目录就按填的走，留空恢复桌面。": "The installer goes to the Desktop by default (following OneDrive-style redirection); enter a folder under step 3 \"Output → Output location\" to use it, and clear it to go back to the Desktop.",
+    "文件名模板支持 {appName} {appVersion} 等占位符；勾多个安装模式时会自动加后缀。": "The file-name template supports placeholders like {appName} {appVersion}; when several modes are ticked, a suffix is added automatically.",
+    "压缩方式：lzma 整体压缩体积最小（推荐）、lzma 逐文件、zlib 最快、bzip2。": "Compression: lzma solid gives the smallest size (recommended), lzma per-file, zlib is fastest, bzip2.",
+    "缓存目录（解开工程、编译中间产物）默认在软件目录下的 data\\work，可在首选项里改；「清空缓存文件…」能一键清理，正在用的会跳过。": "The cache folder (unpacked projects, compile intermediates) defaults to data\\work under the app folder and can be changed in Preferences; \"Clear cache files…\" cleans it up in one go, skipping the one in use.",
+    "命令行（进阶）": "Command line (advanced)",
+    "不想开界面时，也可以用命令行处理工程：": "If you prefer not to open the GUI, you can process a project from the command line:",
+    "首选项详解": "Preferences explained",
+    "菜单最右边的「首选项/设置」（快捷键 Ctrl+,）里可以调这些使用习惯。": "The \"Preferences/Settings\" item at the far right of the menu (Ctrl+,) tunes these habits.",
+    "首选项：① 界面语言；② 界面主题；③ 使用习惯；④ 日期格式；⑤ 文件关联；⑥ 缓存 / 临时目录；⑦ 初始化（恢复默认设置）。": "Preferences: ① language; ② theme; ③ habits; ④ date format; ⑤ file association; ⑥ cache / temp folder; ⑦ reset (restore defaults).",
+    "逐项说明": "Item by item",
+    "界面语言：中文 / English，切换后界面会重新加载一次（工程会先自动保存）。": "Language: Chinese / English; switching reloads the interface once (the project is saved automatically first).",
+    "界面主题：浅色 / 深色，同样会重新加载一次。": "Theme: light / dark; also reloads the interface once.",
+    "使用习惯：启动时显示欢迎页、启动时自动打开上次的工程、默认显示「安装效果预览」。": "Habits: show the welcome page on startup, auto-open the last project on startup, show the Installer Preview by default.",
+    "日期格式：版本列表里日期的顺序，年/月/日、月/日/年、日/月/年。": "Date format: the order of dates in the version list — Year/Month/Day, Month/Day/Year, Day/Month/Year.",
+    "文件关联：把 .jianpack 关联到本程序（双击打开）；关联坏了点「立即关联 / 修复」，也可以取消关联。": "File association: associate .jianpack with this app (double-click to open); if it breaks, click \"Associate / Repair now\", or remove the association.",
+    "缓存 / 临时目录：解开工程、编译中间产物放在哪；「用默认位置」只清掉自定义路径、不删文件；「清空缓存文件…」删除缓存的临时工程（正在用的会跳过，别人放进来的东西不动）。": "Cache / temp folder: where unpacked projects and compile intermediates go; \"Use default location\" only clears a custom path and deletes no files; \"Clear cache files…\" deletes cached temp projects (the one in use is skipped, and anything you placed there is left alone).",
+    "初始化：「恢复默认设置」会清空「最近打开」记录，并把上面这些选项恢复成出厂值。": "Reset: \"Restore default settings\" clears the \"Recent\" list and returns the options above to factory values.",
+    "改语言或主题会让界面重建一次；如果有未保存的改动，程序会先自动保存工程。": "Changing the language or theme reloads the interface once; if there are unsaved changes, the project is saved automatically first.",
+    "常见问题": "FAQ",
+    "安装包里的中文乱码 / 更新日志被截断": "Garbled Chinese in the installer / truncated changelog",
+    "许可协议、更新日志的编码由软件自动转换，一般不用管。如果日志特别长，NSIS 单个字符串变量上限约 1024 字符；本软件已用逐行写入的方式避开截断，若仍遇到异常，请把内容适当精简或反馈。": "The license and changelog encodings are converted automatically, so normally you need not worry. If a changelog is very long, an NSIS string variable holds about 1024 characters; this app avoids truncation by writing line by line, but if you still hit an issue, trim the content or report it.",
+    "安装时弹出「未知发布者」": "\"Unknown publisher\" when installing",
+    "这是没有代码签名导致的，Windows SmartScreen 对没有签名的安装包都会提示。在第 3 步「代码签名（高级）」里配置证书并勾选自动签名即可改善。": "This is because the installer is not code-signed; Windows SmartScreen warns for any unsigned installer. Configure a certificate under step 3 \"Code signing (advanced)\" and tick auto-signing to improve it.",
+    "正经的工程是自包含的单文件，拷过去就能开。如果打不开，多半是里边引用了工程目录之外的文件（绝对路径，或者用 .. 跳出去）。添加文件时选「复制进工程」，整个文件就是自包含的了。": "A proper project is a self-contained single file and opens after being copied. If it will not open, it most likely references files outside the project folder (absolute paths, or .. escapes). When adding files, choose \"Copy into the project\" and the file becomes self-contained.",
+    "检查第 1 步的「内部标识」。不同的软件要有不同的标识；留空的话会按安装目录名自动生成。如果两个软件用了同一个通用标识，会互相覆盖卸载项。": "Check the \"internal ID\" in step 1. Different apps need different IDs; left empty it is derived from the install folder name. If two apps share one generic ID, their uninstall entries overwrite each other.",
+    "工程太大 / 缓存占空间": "The project is huge / the cache takes space",
+    "在「首选项/设置 → 缓存 / 临时目录」里可以看到缓存位置和占用，并「清空缓存文件…」。版本迭代只保留最近 2 版的程序文件，较早的版本会自动淘汰，能减少占用。": "Under \"Preferences/Settings → Cache / temp folder\" you can see the cache location and size and click \"Clear cache files…\". Versioning keeps program files for only the last 2 versions, and older ones are retired automatically, which reduces the footprint.",
+
+    # -- 补齐：以参数传入 / 拼出的界面文案（英文界面不漏中文）--
+    "图片文件": "Image files",
+    "输出位置": "Output location",
+    "留空 = 输出到桌面；也可以填绝对路径（相对路径按工程文件所在目录算）":
+        "Empty = Desktop; an absolute path is also allowed (a relative path resolves against the "
+        "project file's folder)",
+    "可以用 {appName} {appVersion}": "You can use {appName} {appVersion}",
+    "这一版的版本号，例如 1.0.0": "The version number for this release, e.g. 1.0.0",
+    "常规": "General",
+    "兼容性": "Compatibility",
+    "数字签名": "Digital Signatures",
+    "安全": "Security",
+    "详细信息": "Details",
+    "以前的版本": "Previous Versions",
 }

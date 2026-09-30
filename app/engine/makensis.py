@@ -20,6 +20,14 @@ CANDIDATE_PATHS = (
 
 BUNDLED_RELATIVE = Path("vendor") / "nsis" / "makensis.exe"
 
+# Windows 上以图形界面运行时，subprocess 默认会闪出一个黑色命令行窗口。
+# 用 CREATE_NO_WINDOW 把它藏掉（只影响窗口，不影响进程和管道）。
+_CREATE_NO_WINDOW = 0x08000000
+
+
+def no_window_flags() -> int:
+    return _CREATE_NO_WINDOW if sys.platform == "win32" else 0
+
 
 @dataclass
 class CompileResult:
@@ -87,7 +95,8 @@ def compile_nsi(makensis: Path, script: Path, defines: list[str] | None = None) 
         command.append(f"/D{name}")
     command.append(str(script))
 
-    process = subprocess.run(command, capture_output=True, cwd=str(script.parent))
+    process = subprocess.run(command, capture_output=True, cwd=str(script.parent),
+                             creationflags=no_window_flags())
     return CompileResult(
         returncode=process.returncode,
         output=decode_output(process.stdout + process.stderr),

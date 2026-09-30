@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "app-installer-packer"
-version = "0.1.0"
+version = "0.2.0"
 description = "简包装-应用安装向导打包软件 —— 把 .jianpack 工程编译成 Windows 安装包"
 readme = "README.md"
 requires-python = ">=3.10"

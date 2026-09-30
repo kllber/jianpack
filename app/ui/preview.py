@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import re
 import tkinter as tk
 from dataclasses import dataclass
 from pathlib import Path
@@ -92,6 +93,101 @@ def _font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
         font = ImageFont.load_default()
     _font_cache[key] = font
     return font
+
+
+# ---------------------------------------------------------------------------
+# 后备字体
+#
+# 预览里可能显示各种文字：除了中英文，还有韩文、阿拉伯文、泰文……
+# 「微软雅黑」不含这些字形，直接画会变成「口」字乱码。
+# 下面按顺序准备一组后备字体，画字时**逐字挑第一个有该字形的字体**，
+# 既保留雅黑的整体观感，又不会缺字。
+# ---------------------------------------------------------------------------
+
+FALLBACK_FONT_PATHS = (
+    r"C:\Windows\Fonts\msyh.ttc",        # 简体/繁体中文、日文假名、西里尔、拉丁
+    r"C:\Windows\Fonts\malgun.ttf",      # 韩文
+    r"C:\Windows\Fonts\segoeui.ttf",     # 阿拉伯文、越南文、拉丁
+    r"C:\Windows\Fonts\LeelawUI.ttf",    # 泰文
+    r"C:\Windows\Fonts\tahoma.ttf",
+    r"C:\Windows\Fonts\seguisym.ttf",    # 最后的兜底
+)
+
+
+class _MixedFont:
+    """一组后备字体，按字符选第一个有该字形的。"""
+
+    def __init__(self, size: int) -> None:
+        self.entries: list[tuple[str, ImageFont.FreeTypeFont]] = []
+        for path in FALLBACK_FONT_PATHS:
+            if not Path(path).is_file():
+                continue
+            try:
+                self.entries.append((path, ImageFont.truetype(path, size)))
+            except OSError:
+                continue
+        self._cache: dict[str, ImageFont.FreeTypeFont | None] = {}
+
+    def of(self, char: str):
+        if char in self._cache:
+            return self._cache[char]
+        chosen = self.entries[-1][1] if self.entries else None
+        for _path, font in self.entries:
+            if _has_glyph(font, char):
+                chosen = font
+                break
+        self._cache[char] = chosen
+        return chosen
+
+
+_mixed_cache: dict[int, _MixedFont] = {}
+
+
+def _mixed(size: int) -> _MixedFont:
+    if size not in _mixed_cache:
+        _mixed_cache[size] = _MixedFont(size)
+    return _mixed_cache[size]
+
+
+def _has_glyph(font: ImageFont.FreeTypeFont, char: str) -> bool:
+    """字体里有没有这个字的字形（拿一个必定缺字的码位当参照）。"""
+    try:
+        return bytes(font.getmask(char)) != bytes(font.getmask("\ue000"))
+    except Exception:  # noqa: BLE001 - 判断不了就当它是有的
+        return True
+
+
+def _mixed_width(draw, text: str, mixed: _MixedFont) -> float:
+    total = 0.0
+    for char in text:
+        font = mixed.of(char)
+        if font is not None:
+            total += draw.textlength(char, font=font)
+    return total
+
+
+def _draw_mixed(draw, text: str, x: int, y: int, size: int,
+                fill=COL_TEXT, max_width: int | None = None) -> int:
+    """逐字挑字体画一行文字（缺字形也不会变成「口」）。返回结束的 x。"""
+    text = str(text or "")
+    mixed = _mixed(size)
+    if max_width is not None and _mixed_width(draw, text, mixed) > max_width:
+        text = _clip_mixed(draw, text, mixed, max_width)
+    cursor = float(x)
+    for char in text:
+        font = mixed.of(char)
+        if font is None:
+            continue
+        draw.text((cursor, y), char, font=font, fill=fill)
+        cursor += draw.textlength(char, font=font)
+    return int(round(cursor))
+
+
+def _clip_mixed(draw, text: str, mixed: _MixedFont, max_width: int) -> str:
+    out = text
+    while out and _mixed_width(draw, out + "…", mixed) > max_width:
+        out = out[:-1]
+    return out + "…"
 
 
 def _open_scaled(path: Path, size: tuple[int, int] | None):
@@ -686,8 +782,8 @@ def _render_appinfo(project: Project) -> Image.Image:
     draw.text((W - 24, 8), "\u2715", font=_font(11), fill=(70, 70, 70))
 
     # 标签条
-    tabs = [("常规", False), ("兼容性", False), ("数字签名", False),
-            ("安全", False), ("详细信息", True), ("以前的版本", False)]
+    tabs = [(_("常规"), False), (_("兼容性"), False), (_("数字签名"), False),
+            (_("安全"), False), (_("详细信息"), True), (_("以前的版本"), False)]
     x = 6
     active = None
     for label, is_active in tabs:
@@ -721,8 +817,9 @@ def _render_appinfo(project: Project) -> Image.Image:
     y += row_h
     for label, value in rows:
         draw.text((x0 + 8, y + 6), label, font=_font(11), fill=(60, 60, 60))
-        draw.text((sep + 8, y + 6), _clip(draw, str(value), _font(11), x1 - sep - 14),
-                  font=_font(11), fill=(20, 20, 20))
+        # 值里可能有韩文 / 阿拉伯文 / 泰文等雅黑没有的字形，用后备字体画
+        _draw_mixed(draw, value, sep + 8, y + 6, 11, (20, 20, 20),
+                    max_width=x1 - sep - 14)
         y += row_h
     draw.rectangle([x0, top, x1, y], outline=(200, 200, 200))
     draw.line([x0, top + row_h, x1, top + row_h], fill=(200, 200, 200))
@@ -790,6 +887,38 @@ SUBTAB_TO_PAGE = {
 }
 
 
+def _numbers(value) -> list[int]:
+    return [int(x) for x in re.findall(r"-?\d+", str(value))]
+
+
+def _pack_pady(widget) -> int:
+    """某个控件在 pack 时上下留的空白之和。"""
+    try:
+        value = widget.pack_info().get("pady", 0)
+    except tk.TclError:
+        return 0
+    nums = _numbers(value)
+    if not nums:
+        return 0
+    return sum(nums) if len(nums) >= 2 else nums[0] * 2
+
+
+def _padding_vertical(widget, horizontal: bool = False) -> int:
+    """ttk 控件的 ``padding`` 在竖直（或水平）方向上的总和。"""
+    try:
+        value = widget.cget("padding")
+    except (tk.TclError, AttributeError):
+        return 0
+    nums = _numbers(value)
+    if len(nums) == 4:
+        return (nums[0] + nums[2]) if horizontal else (nums[1] + nums[3])
+    if len(nums) == 2:
+        return nums[0] if horizontal else nums[1]
+    if len(nums) == 1:
+        return nums[0] * 2
+    return 0
+
+
 class PreviewPanel(ttk.Frame):
     """左侧栏里的实时预览。"""
 
@@ -797,6 +926,8 @@ class PreviewPanel(ttk.Frame):
         super().__init__(master, padding=(10, 6, 10, 12))
         self.app = app
         self._photo = None
+        self._image = None            # 未缩放的整张预览图
+        self._last_fit = None         # 上次缩放的可用尺寸，避免反复重画
         self._page = "welcome"
         self._pages: list[str] = []
         self._build()
@@ -805,8 +936,9 @@ class PreviewPanel(ttk.Frame):
         from .widgets import APP_FONT, TITLE_FONT
 
         # 字号和左边的「打包步骤」保持一致，两个区块看起来才是一套
-        ttk.Label(self, text=_("安装效果预览"), foreground=theme.c("accent"),
-                  font=TITLE_FONT).pack(anchor="w", pady=(0, 8))
+        self._head = ttk.Label(self, text=_("安装效果预览"), foreground=theme.c("accent"),
+                               font=TITLE_FONT)
+        self._head.pack(anchor="w", pady=(0, 8))
 
         row = ttk.Frame(self)
         row.pack(fill="x", pady=(0, 8))
@@ -817,15 +949,55 @@ class PreviewPanel(ttk.Frame):
         self.page_box.bind("<<ComboboxSelected>>", self._on_page_selected)
         ttk.Label(row, text=_("   跟着编辑内容实时变"), foreground=theme.c("hint"),
                   font=APP_FONT).pack(side="left")
+        self._row = row
 
-        self.screen = tk.Label(self, background=theme.c("screen"), borderwidth=1, relief="solid")
-        self.screen.pack()
+        # 模拟窗口整张（含标题栏和底部按钮）等比缩放到这块区域里显示，
+        # 左栏空间不够时也不会把顶部标题栏裁掉。
+        self.screen = tk.Label(self, background=theme.c("screen"), borderwidth=1,
+                               relief="solid", anchor="n")
+        self.screen.pack(anchor="n")
 
-        ttk.Label(self, foreground=theme.c("hint"), justify="left",
-                  font=("Microsoft YaHei UI", 8),
-                  text=_("按真实版式绘制的示意图，用来确认文案和图片效果；\n"
-                         "字体和换行位置可能和最终安装程序差一两行。")
-                  ).pack(anchor="w", pady=(8, 0))
+        self._hint = ttk.Label(self, foreground=theme.c("hint"), justify="left",
+                               font=("Microsoft YaHei UI", 8),
+                               text=_("按真实版式绘制的示意图，用来确认文案和图片效果；\n"
+                                      "字体和换行位置可能和最终安装程序差一两行。"))
+        self._hint.pack(anchor="w", pady=(8, 0))
+
+        self.bind("<Configure>", self._on_panel_resize, add="+")
+
+    # -- 缩放 ---------------------------------------------------------------
+
+    def _available(self) -> tuple[int, int]:
+        """预览图最多能画多大：面板尺寸扣掉标题 / 下拉框 / 说明和内外边距。"""
+        width = self.winfo_width() - _padding_vertical(self, horizontal=True) - 2
+        height = self.winfo_height() - _padding_vertical(self)
+        for widget in (self._head, self._row, self._hint):
+            height -= widget.winfo_reqheight() + _pack_pady(widget)
+        return max(160, width), max(160, height)
+
+    def _redraw_image(self) -> None:
+        """把整张预览图等比缩放到可用区域（只在必要时缩放，不放大）。"""
+        from PIL import ImageTk
+
+        if self._image is None:
+            return
+        avail_w, avail_h = self._available()
+        if (avail_w, avail_h) == self._last_fit:
+            return
+        self._last_fit = (avail_w, avail_h)
+
+        image = self._image
+        if image.width > avail_w or image.height > avail_h:
+            scale = min(avail_w / image.width, avail_h / image.height)
+            image = image.resize(
+                (max(1, round(image.width * scale)), max(1, round(image.height * scale))),
+                Image.LANCZOS)
+        self._photo = ImageTk.PhotoImage(image)
+        self.screen.configure(image=self._photo, text="")
+
+    def _on_panel_resize(self, _event=None) -> None:
+        self._last_fit = None
+        self._redraw_image()
 
     # -- 数据 ---------------------------------------------------------------
 
@@ -853,10 +1025,10 @@ class PreviewPanel(ttk.Frame):
             self.refresh()
 
     def refresh(self) -> None:
-        from PIL import ImageTk
-
         project = self.app.project
+        self._last_fit = None
         if project is None:
+            self._image = None
             self.screen.configure(image="", text=_("（还没有打开工程）"),
                                   foreground=theme.c("hint"))
             return
@@ -872,9 +1044,10 @@ class PreviewPanel(ttk.Frame):
         try:
             image = render(project, self._page)
         except Exception as exc:  # noqa: BLE001 - 预览出错不该影响编辑
+            self._image = None
             self.screen.configure(image="", text=_("预览画不出来：\n{exc}").format(exc=exc),
                                   foreground=theme.c("danger"))
             return
 
-        self._photo = ImageTk.PhotoImage(image)
-        self.screen.configure(image=self._photo, text="")
+        self._image = image
+        self._redraw_image()

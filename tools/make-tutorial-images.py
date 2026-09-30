@@ -42,7 +42,7 @@ def L(zh: str, en: str) -> str:
     """示意图里画的文字跟语言走。"""
     return en if LANG == "en" else zh
 
-WIN_W, WIN_H = 1440, 1000            # 抓图时固定的窗口尺寸（内容单列、一屏放得下）
+WIN_W, WIN_H = 1440, 1200            # 抓图时固定的窗口尺寸（和默认窗口一致）
 GUTTER = 72                          # 内容截图的左侧留白，专门放编号，避免压住文字
 RED = (224, 30, 30)
 WHITE = (255, 255, 255)
@@ -295,14 +295,30 @@ def make_sample_photo(path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 def shot_overview(win: MainWindow) -> None:
+    """主界面总览：把五个板块圈出来，编号放在各自的**右上角**。
+
+    各板块的标题都在左上角，编号放右上角才不会压住文字；同时避开相邻板块
+    （预览圈的是渲染区、不含标题行）以免圆角框互相重叠。
+    """
     win._select_step(0)
     pump(win)
     image, origin = grab(win)
     frame = Frame(image, origin)
-    frame.ring(rect_of(win.step_list, win), 1, badge_at=(14, 46))
-    frame.ring(rect_of(win.content_area, win), 2, badge_at=(1416, 8))
-    frame.ring(rect_of(win.preview_panel.screen, win), 3, badge_at=(14, 262))
-    frame.arrow((700, 430), (522, 430))
+    version = rect_of(win.version_panel, win)
+    steps = rect_of(win.steps, win)
+    screen = rect_of(win.preview_panel.screen, win)
+    preview_panel = rect_of(win.preview_panel, win)
+    build = rect_of(win.build_panel, win)
+    status = rect_of(win.status, win)
+
+    # 编号统一放右上角（title 在左，右侧空着）
+    frame.ring(version, 1, badge_at=(version[2] - 6, version[1] + 16), pad=6)
+    frame.ring(steps, 2, badge_at=(steps[2] - 6, steps[1] + 16), pad=6)
+    # 预览圈「渲染区」，编号放到预览面板标题行的右上角，远离下拉框、也不压图
+    frame.ring(screen, 3, badge_at=(preview_panel[2] - 6, preview_panel[1] + 16), pad=6)
+    frame.ring(build, 4, badge_at=(build[2] - 6, build[1] + 16), pad=6)
+    # 状态栏很矮，编号放在右端、垂直居中
+    frame.ring(status, 5, badge_at=(status[2] - 30, (status[1] + status[3]) // 2), pad=3)
     frame.save("t01-overview.png")
 
 
@@ -332,7 +348,7 @@ def shot_basic(win: MainWindow) -> None:
     image, origin = content_image(win, page)
     frame = Frame(image, origin, gutter=GUTTER)
     names = (L("应用名称 *", "App name *"), L("安装目录名", "Install folder name"),
-             L("版本号 *", "Version *"), L("程序图标", "App icon"))
+             L("程序文件版本", "File version"), L("程序图标", "App icon"))
     for number, name in enumerate(names, 1):
         frame.ring(rect_of(find(page, name).master, win), number)
     frame.save("t03-basic.png")
@@ -529,6 +545,15 @@ def shot_preferences(win: MainWindow) -> None:
         else:
             _sys.frozen = old_frozen
     pump(dialog, 0.5)
+    # 设置窗口默认高度只到「文件关联」，后续分区要靠滚动看。教程要把所有分区
+    # 都拍进一张图，这里临时把滚动区撑到全部内容的高度（窗口本身可缩放）。
+    scroll = getattr(dialog, "body_scroll", None)
+    if scroll is not None:
+        scroll.inner.update_idletasks()
+        scroll.canvas.configure(height=scroll.inner.winfo_reqheight() + 4)
+        dialog.update_idletasks()
+        dialog._center(dialog.master)
+        pump(dialog, 0.4)
     image, origin = grab(dialog)
     frame = Frame(image, origin)
     sections = (
@@ -566,6 +591,26 @@ def frame_rect(win) -> tuple[int, int]:
     return rect.left, rect.top
 
 
+def _menu_item_rect(win, index: int):
+    """某个菜单项的屏幕矩形（Windows 原生菜单，含标题栏坐标）。
+
+    ``index`` 是**原生菜单项序号**：Tk 的 menubar 在索引 0 放了一个不可见的
+    tearoff 项，Windows 原生菜单里没有它，换算时要跳过去。
+    """
+    import ctypes
+    from ctypes import wintypes
+
+    user32 = ctypes.WinDLL("user32")
+    hwnd = int(win.tk.call("wm", "frame", win._w), 16)
+    hmenu = user32.GetMenu(wintypes.HWND(hwnd))
+    if not hmenu:
+        return None
+    rect = wintypes.RECT()
+    if not user32.GetMenuItemRect(wintypes.HWND(hwnd), hmenu, index, ctypes.byref(rect)):
+        return None
+    return rect.left, rect.top, rect.right, rect.bottom
+
+
 def shot_menu(win: MainWindow) -> None:
     """截「标题栏 + 菜单栏」，圈出「帮助」菜单。"""
     win._select_step(0)
@@ -580,12 +625,14 @@ def shot_menu(win: MainWindow) -> None:
         except Exception:  # noqa: BLE001 - 分隔符之类的没有 label
             labels.append("")
     help_index = labels.index(L("帮助", "Help"))
-
-    import tkinter.font as tkfont
-    measure = tkfont.Font(family="Microsoft YaHei UI", size=9)
-    x = 10
+    # Tk 索引 -> 原生菜单索引：跳过那个不可见的 tearoff 项
+    native_index = 0
     for i in range(help_index):
-        x += measure.measure(labels[i]) + 16
+        try:
+            if menubar.type(i) != "tearoff":
+                native_index += 1
+        except Exception:  # noqa: BLE001
+            native_index += 1
 
     _, top = frame_rect(win)
     left = win.winfo_rootx()                       # 从客户区左边开始，横向坐标好算
@@ -593,9 +640,21 @@ def shot_menu(win: MainWindow) -> None:
     image = ImageGrab.grab(bbox=(left, top, left + width, top + height))
     frame = Frame(image, (0, 0))
     client_top = win.winfo_rooty() - top           # 客户区在图片里的 y
-    menu_top = max(0, client_top - 26)
-    frame.ring((x - 10, menu_top, x + 44, client_top), 1)
-    frame.pill(L("帮助 → 教程（F1）", "Help → Tutorial (F1)"), (x + 60, client_top + 4))
+
+    rect = _menu_item_rect(win, native_index)
+    if rect is not None:                           # 精确：直接用菜单项本人的矩形
+        box = (rect[0] - left, rect[1] - top, rect[2] - left, rect[3] - top)
+    else:                                          # 兜底：按菜单字体估算
+        import tkinter.font as tkfont
+        measure = tkfont.nametofont("TkMenuFont")
+        x = 10
+        for i in range(help_index):
+            x += measure.measure(labels[i]) + 16
+        box = (x - 10, max(0, client_top - 26), x + 44, client_top)
+
+    frame.ring(box, 1, pad=2)
+    frame.pill(L("帮助 → 教程（F1）", "Help → Tutorial (F1)"),
+               (box[2] + 18, client_top + 4))
     frame.save("t11-menu.png")
 
 

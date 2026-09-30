@@ -14,7 +14,9 @@ from .base import StepPage
 ASSOC_FIELDS = [    {"key": "ext", "label": "扩展名", "hint": "例如 .myext（带不带点都行）"},
     {"key": "description", "label": "描述", "hint": "显示在「打开方式」里"},
     {"key": "icon", "label": "图标", "hint": "安装目录内的相对路径；留空用主程序图标"},
-    {"key": "is_default", "label": "设为默认打开方式", "kind": "check"},
+    {"key": "is_default", "label": "设为默认打开方式", "kind": "check",
+     "hint": "Windows 10/11 保护用户已选的默认程序，勾选只是把它注册为可选项，"
+             "不一定会立刻成为默认"},
 ]
 PROTO_FIELDS = [
     {"key": "scheme", "label": "协议名", "hint": "例如 myapp（对应 myapp://…）"},

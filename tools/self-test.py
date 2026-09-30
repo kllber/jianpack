@@ -736,11 +736,10 @@ def test_preview(work: Path) -> None:
             pass
 
 
-def test_no_maximize(work: Path) -> None:
-    """全屏 / 最大化应当被禁用：按钮去掉，被最大化也会自动还原。"""
-    print("\n=== 11. 禁用最大化 ===")
+def test_maximize(work: Path) -> None:
+    """最大化 / 屏幕适配：按钮要在、能铺满屏幕，且最大化时切换预览不回弹。"""
+    print("\n=== 11. 最大化 / 屏幕适配 ===")
     import ctypes
-    import tkinter as tk
     from ctypes import wintypes
 
     from app.ui.main_window import MainWindow
@@ -759,7 +758,7 @@ def test_no_maximize(work: Path) -> None:
             time.sleep(0.02)
 
     try:
-        pump(0.8)
+        pump(1.0)
 
         user32 = ctypes.WinDLL("user32", use_last_error=True)
         get_long = getattr(user32, "GetWindowLongPtrW", None) or user32.GetWindowLongW
@@ -771,24 +770,30 @@ def test_no_maximize(work: Path) -> None:
             hwnd = int(window.tk.call("wm", "frame", window._w), 16)
             return bool(get_long(wintypes.HWND(hwnd), GWL_STYLE) & WS_MAXIMIZEBOX)
 
-        check("标题栏的「最大化」按钮已去掉", not has_max_box())
+        check("标题栏保留了「最大化」按钮", has_max_box())
 
         before = (window.winfo_width(), window.winfo_height())
         window.state("zoomed")
         pump(1.5)
-        after = (window.winfo_width(), window.winfo_height())
-        check("强行最大化也会自动还原",
-              after[0] < window.winfo_screenwidth() - 5,
-              f"{before} -> {after}（屏幕宽 {window.winfo_screenwidth()}）")
+        on_screen = window.winfo_screenwidth()
+        check("可以最大化到铺满屏幕",
+              window.winfo_width() >= on_screen - 5,
+              f"{before} -> {window.winfo_width()}（屏宽 {on_screen}）")
 
-        # 走系统菜单那条路（双击标题栏 / Win+↑ 用的就是它）
-        hwnd = int(window.tk.call("wm", "frame", window._w), 16)
-        user32.SendMessageW.argtypes = [wintypes.HWND, ctypes.c_uint,
-                                        ctypes.c_ssize_t, ctypes.c_ssize_t]
-        user32.SendMessageW(wintypes.HWND(hwnd), 0x0112, 0xF030, 0)   # SC_MAXIMIZE
-        pump(1.5)
-        check("模拟「最大化」命令也不生效",
-              window.winfo_width() < window.winfo_screenwidth() - 5,
+        # 最大化状态下切换「显示安装预览」：只该调整左栏宽度，不能把窗口拽回小尺寸
+        window.toggle_preview(False)
+        pump(0.5)
+        width_after_hide = window.winfo_width()
+        window.toggle_preview(True)
+        pump(0.5)
+        check("最大化时切换预览不回弹（屏幕适配）",
+              width_after_hide >= on_screen - 5 and window.winfo_width() >= on_screen - 5,
+              f"隐藏后 {width_after_hide} / 恢复后 {window.winfo_width()}")
+
+        window.state("normal")
+        pump(1.0)
+        check("还原回普通窗口",
+              window.winfo_width() < on_screen - 5,
               f"实际宽 {window.winfo_width()}")
     finally:
         try:
@@ -1039,6 +1044,30 @@ def test_tutorial(work: Path) -> None:
         check("英文教程配图都在（切英文时自动用英文那套）",
               en_root.name == "en" and not missing_en, f"{en_root}，缺少 {missing_en}")
         i18n.set_language("zh")
+
+        # 教程文案全靠 i18n.EN 翻译：每一条（含章节标题 / 图注 / 表格单元格）
+        # 都要有英文，否则英文界面的教程里会露出中文。
+        def tutorial_texts():
+            for chapter in tutorial.CHAPTERS:
+                yield chapter["title"]
+                for block in chapter["blocks"]:
+                    kind = block[0]
+                    if kind == "image":
+                        yield block[2]
+                    elif kind == "table":
+                        yield from block[1]
+                        for row in block[2]:
+                            yield from row
+                    elif kind in ("p", "h1", "h2", "note"):
+                        yield block[1]
+                    elif kind in ("bullets", "steps"):
+                        yield from block[1]
+                    # code 块不翻译，跳过
+
+        no_en = [text for text in tutorial_texts()
+                 if text.strip() and text not in i18n.EN]
+        check("教程文案都有英文翻译（英文界面不会露中文）", not no_en,
+              f"{len(no_en)} 条缺英文：{no_en[:3]}")
 
         check("打开教程不会弄脏工程", window.app.dirty == dirty_before)
 
@@ -1641,6 +1670,86 @@ def test_cache_buttons(work: Path) -> None:
         save_settings(settings)
 
 
+def test_versions(work: Path) -> None:
+    print("\n=== 24. 版本迭代 / 切换 ===")
+    from app.core.project import FileItem, reload_project
+    from app.core.versions import load_store
+
+    project_file = work / DEMO.name
+    folder = work / "input"
+
+    def add_payload(project, text: str) -> None:
+        folder.mkdir(exist_ok=True)
+        (folder / "版本.txt").write_text(text, encoding="utf-8")
+        project.files.items = [FileItem(type="folder", source="input", dest=".")]
+
+    def tag(text: str) -> None:
+        folder.mkdir(exist_ok=True)
+        (folder / "版本.txt").write_text(text, encoding="utf-8")
+
+    def state(store) -> str:
+        return " | ".join(f"{i.display()}:{'文件' if i.payload_stored else '已淘汰'}"
+                          for i in store.ordered())
+
+    tag("v0.1.0")
+    project = load_project(project_file)
+    save_project(project)
+    store = load_store(project)
+    check("新工程一开始没有版本", len(store.items) == 0)
+
+    store.new_version(project, "0.1.0", note="首版")
+    save_project(project)
+    check("建了第一个版本", len(store.items) == 1 and store.current_item() is not None,
+          state(store))
+
+    for ver in ("0.1.1", "0.1.2", "0.1.3"):
+        project = reload_project(project)
+        store = load_store(project)
+        store.new_version(project, ver, note=ver + " 版")
+        check(f"新版本 {ver} 的打包内容已清空",
+              project.files.items == [] and not folder.exists(), state(store))
+        add_payload(project, "v" + ver)
+        save_project(project)
+
+    check("四个版本都在清单里", len(store.items) == 4, state(store))
+    archived = [i for i in store.items if i.id != store.current]
+    check("只保留最近 2 版的程序文件（当前 + 1 个存档）",
+          sum(1 for i in archived if i.payload_stored) == 1, state(store))
+    check("更早的版本标记为「已淘汰」",
+          sum(1 for i in archived if not i.payload_stored) == 2, state(store))
+
+    ids = {i.display(): i.id for i in store.items}
+    with_files = [i for i in archived if i.payload_stored][0]
+    project = reload_project(project)
+    store = load_store(project)
+    store.switch_to(project, ids[with_files.display()])
+    project = reload_project(project)
+    check("切到带程序文件的旧版本，程序文件被正确恢复",
+          (folder / "版本.txt").is_file()
+          and (folder / "版本.txt").read_text(encoding="utf-8") == with_files.display())
+
+    store = load_store(project)
+    only_conf = [i for i in store.ordered() if not i.payload_stored and i.id != store.current]
+    if only_conf:
+        target = only_conf[-1]
+        store.switch_to(project, target.id)
+        project = reload_project(project)
+        check("切到「已淘汰」版本会清空打包内容",
+              not folder.exists() and project.files.items == [])
+        st = load_store(project)
+        check("切到「已淘汰」版本后它仍标记为已淘汰",
+              st.current_item() is not None and not st.current_item().payload_stored)
+
+    # 删除一个非当前版本
+    store = load_store(project)
+    victims = [i for i in store.items if i.id != store.current]
+    if victims:
+        before = len(store.items)
+        store.delete(victims[-1].id)
+        store.save()
+        check("删除版本后清单少一条", len(store.items) == before - 1)
+
+
 def main() -> int:
     work = make_workspace()
     # 把「本软件的设置 / 数据目录」也引到临时目录 —— 否则自检会往真实的
@@ -1661,7 +1770,7 @@ def main() -> int:
         test_validate_robustness(work)
         test_inline_text_pages(work)
         test_preview(work)
-        test_no_maximize(work)
+        test_maximize(work)
         test_tutorial(work)
         test_container(work)
         test_demo_readonly(work)
@@ -1673,6 +1782,7 @@ def main() -> int:
         test_progress_windows(work)
         test_gate_options(work)
         test_cache_buttons(work)
+        test_versions(work)
     finally:
         shutil.rmtree(work, ignore_errors=True)
 

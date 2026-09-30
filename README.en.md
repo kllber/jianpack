@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/kllber/jianpack/releases/latest"><img alt="Version" src="https://img.shields.io/badge/version-0.1.0-2ea44f"></a>
+  <a href="https://github.com/kllber/jianpack/releases/latest"><img alt="Version" src="https://img.shields.io/badge/version-0.2.0-2ea44f"></a>
   <a href="LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue"></a>
   <img alt="Platform: Windows 10 / 11" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D6">
   <img alt="Python 3.10+" src="https://img.shields.io/badge/python-3.10%2B-3776AB">
@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/kllber/jianpack/releases/latest"><img alt="Download JianPack v0.1.0" src="https://img.shields.io/badge/Download-JianPack%20v0.1.0-2ea44f?style=for-the-badge&logo=github&logoColor=white"></a>
+  <a href="https://github.com/kllber/jianpack/releases/latest"><img alt="Download JianPack v0.2.0" src="https://img.shields.io/badge/Download-JianPack%20v0.2.0-2ea44f?style=for-the-badge&logo=github&logoColor=white"></a>
 </p>
 
 ---
@@ -36,16 +36,17 @@ redistribution and commercial use).
 
 ---
 
-## 1. Current version & feature overview (v0.1.0)
+## 1. Current version & feature overview (v0.2.0)
 
 | Area | Capability |
 |---|---|
 | **4-step wizard** | Basic info → Package contents → Install settings (incl. output & build) → Installer UI |
 | **Project file** | `.jianpack` single-file container (essentially a zip: `project.json` + `assets/` + `payload/` …); also compatible with the older "folder project", auto-detected by file header; "Save As" always produces a single file |
+| **Version iterate / switch** | Upper-left panel: keep several versions in one project and switch with one click; **only the last 2 versions (incl. the current one) keep their program files**, older ones are auto-"retired" (still viewable, but can no longer take files or be built); lock / rename / note / delete supported; a brand-new empty project creates its first version first |
 | **Double-click to open** | The packaged build auto-associates `.jianpack` (writes HKCU, no admin needed); double-click goes straight to the main window; a one-click repair/remove is in Preferences |
 | **Package contents** | Add files/folders; **folders keep their own name by default** (can be turned off in the dialog → place contents only, with live preview); include/exclude filters; main program auto-detected; **removing an item also deletes its copy under the project's `payload\`** (external references are left untouched) |
 | **Install settings** | Default/custom install path, allow the user to change it, remember last location, show disk usage; user-data directory; whether to ask about keeping user data on uninstall |
-| **Installer UI** | Text and images per page (Welcome / License / Changelog / Install location / Install options / Finish + header image); License and Changelog support "edit inline" or "import from txt"; **the Install options page also holds the desktop / Start Menu shortcut settings**; **unchecking a parent greys out its children** |
+| **Installer UI** | Text and images per page (Welcome / License / Changelog / Install location / Install options / Finish + header image); License and Changelog support "edit inline" or "import from txt"; **the Install options page also holds the desktop / Start Menu shortcut settings (with custom launch arguments and icon)**; **installer UI language is selectable**; **unchecking a parent greys out its children** |
 | **Start build** | Always-visible bottom-left panel: validate / generate script / start build / open output folder + live log; **build progress window** |
 | **Code signing** | After building, signs the installer with `signtool` (Authenticode); bring your own certificate, leave empty to skip |
 | **System integration** | Advanced drawer in step 3: **file associations / URL protocols / custom registry entries**; written on install, cleaned on uninstall |
@@ -54,9 +55,9 @@ redistribution and commercial use).
 | **Live preview** | Covers the 7 installer pages plus an **App Properties** preview, follows the edited content and the **variant selected in step 3** automatically; toggle with `Ctrl+P` |
 | **Images** | Drop any-format image for icon / header image / welcome image → crop dialog (drag/zoom) → auto-orient, alpha flattened onto white, exported as BMP / multi-size ICO |
 | **Loading feedback** | A **loading window** when opening a project: double-click `.jianpack` / app start uses the icon version, opening from inside the app uses a simplified icon-less version; **it is skipped when reading is fast**, shown otherwise with **real extraction progress** |
-| **UI** | Bilingual Chinese/English; light/dark themes; **checkboxes are custom-drawn ✓** (unaffected by the system theme) |
+| **UI** | Bilingual Chinese/English; light/dark themes; **checkboxes are custom-drawn ✓** (unaffected by the system theme); **the window can be maximized** (fills the screen, wide window flows into two columns; the default open size/position is unchanged) |
 | **Preferences** | Language / theme / startup habits / file-association repair / cache directory ("use default location" + "clear cache files…") / restore defaults |
-| **Built-in tutorial** | 8 illustrated chapters, in both Chinese and English (images generated from the real UI by a script), in a separate non-modal window |
+| **Built-in tutorial** | 6 illustrated chapters (Meet JianPack / Strengths & limits / Quick start / Advanced usage / Preferences / FAQ), in both Chinese and English (images generated from the real UI by a script), in a separate non-modal window |
 | **Command line** | `validate` / `generate` / `build` / `pack` / `unpack` |
 | **Engine** | Bundled portable NSIS; produced installers are dependency-free; supports silent install/uninstall `/S` |
 | **Other** | Ships with a read-only demo project; low disk space is caught early; cache/settings travel with the folder (portable) |
@@ -137,7 +138,7 @@ double-clicks the exe inside.** No Python, NSIS or any runtime needed on their s
 
 | Step | What you can do |
 |---|---|
-| 1. Basic info | App name, install directory name, version, file version, internal identifier, company/author, copyright, homepage, description, program icon |
+| 1. Basic info | App name, install directory name, file version, internal identifier, company/author, copyright, homepage, description, program icon (**the version number is managed in the upper-left "Versions" panel**) |
 | 2. Package contents | Add files/folders, adjust the post-install location (**a folder can keep its name or place contents only**), specify the main program, remove items |
 | 3. Install settings | Install path / allow the user to change it / remember last location / disk usage / user data / uninstall prompt; **system integration (advanced)**; **which versions to build**; **output settings** (location / file name / compression); **code signing (advanced)** |
 | 4. Installer UI | Text and images for each page; License/Changelog edited inline or imported from txt; header image; **the Install options page sets the desktop / Start Menu shortcuts**; **the Finish page can offer an "auto-start" checkbox** |
@@ -166,9 +167,9 @@ script / start build / open output folder + live log) — not a wizard step, cli
 
 The left column has a fixed width; the editor takes the remaining width. **When the
 window is wide enough, group boxes automatically flow into two columns** (single column
-when narrow). The title bar's "maximize" button was removed (the layout is designed for
-a normal window width, and filling the screen looks empty), but you can still drag the
-border to resize; if it gets maximized by other means it is automatically restored.
+when narrow). The window can be **maximized** normally (the maximize button, double-click
+the title bar, or Win+↑) to use the whole screen; toggling the preview or changing settings
+while maximized will not shrink it back.
 
 ### Live preview
 
@@ -263,33 +264,46 @@ with a prompt.
 
 ---
 
-## 6. Recent changes (what this round did)
+## 6. Recent changes (v0.2.0)
+
+> Everything since v0.1.0 is collected in this release.
 
 **New features**
-- **Loading window** when opening a project (icon / simplified icon-less) + **real
-  extraction progress** + delayed display.
-- **Build progress window** (counts variants + progress bar + output file name).
-- Package contents: a **"keep folder name" toggle per folder item** (dialog with live
-  preview + a new list column).
-- **Unchecking a parent greys out children** (fully wired across steps 3/4/5; values are
-  retained).
-- Cache in Preferences: button renamed to "**use default location**", added "**clear
-  cache files…**".
-- Checkboxes changed to **custom-drawn ✓** (some themes used to draw them as ✗).
+- **Version iterate / switch**: keep several versions in one project and switch with one
+  click; only the last 2 versions (incl. the current one) keep their program files, older
+  ones are auto-"retired" (still viewable, but can no longer take files or be built);
+  lock / rename / note / delete supported; a brand-new empty project creates its first version.
+- **Built-in illustrated tutorial rebuilt into 6 chapters** (Meet JianPack / Strengths &
+  limits / Quick start / Advanced usage / Preferences / FAQ), with the Chinese and English
+  image sets regenerated and the number badges re-placed (no longer covering titles).
+- **The window can be maximized / used full-screen**: fills the screen and flows into two
+  columns when wide; toggling the preview while maximized does not shrink it back.
+- **App Properties languages are multi-select + custom** (step 1).
+- **Code signing (Authenticode)**: automatically runs `signtool` after a build (bring your own cert).
+- **System integration (advanced drawer)**: file associations / URL protocols / custom
+  registry entries, written on install and cleaned up on uninstall.
+- **"Auto-start on sign-in"** checkbox on the Finish page (optionally checked by default).
+- **Installer UI language is selectable**; shortcuts can set launch arguments / icon.
+- **Loading window** when opening a project (icon / simplified) + real extraction progress
+  + delayed display; **build progress window**.
+- Package contents: a **"keep folder name" toggle per folder item** (dialog with live preview).
+- **Unchecking a parent greys out its children** (steps 3/4; values retained).
+- Preferences cache: "use default location" + "clear cache files…"; checkboxes changed to
+  **custom-drawn ✓**.
 
 **Behavior changes**
-- "Install mode" **moved from step 3 to a multi-select in step 3**; the preview follows
-  step 3, eliminating the "preview doesn't match the result" issue.
-- Removing an item now **cleans up the project's `payload\` copy**, so no orphan files
-  are left and the "overwrite?" prompt no longer keeps appearing.
-- **The full tutorial image set (Chinese and English) was regenerated** and the text was
-  synced.
+- Build action and log moved to an **always-visible bottom-left "Start Build" panel**; the
+  wizard went from 5 steps to **4**, with the build settings folded into step 3 "Install settings".
+- "Install mode" became a multi-select in step 3 ("variants to build"), and the preview
+  follows it, eliminating the "preview doesn't match the result" issue.
+- Removing an item now **cleans up the project's `payload\` copy**.
 
 **Important bugs fixed**
+- The version-info block was emitted twice → `VIAddVersionKey ... already defined!`, build failed.
 - In a Chinese IME, typing `p`/`t` then Enter would wrongly trigger "Tutorial"/"Build".
-- Validation crashed outright when a source file was missing and no main program was set.
-- After adding a folder, files were **flattened** into the install root (folder name lost).
-- Opening a large project gave **no feedback** (solved by the loading window).
+- Scrolling the language / system-integration lists also scrolled the whole page.
+- Tutorial screenshots were offset on high-DPI screens.
+- In English mode the App Properties preview tab labels and step 3 "Output location" still showed Chinese.
 
 ---
 
@@ -309,7 +323,8 @@ flow, image crop/conversion, embedded text, preview linkage, layout boundaries, 
 window, preferences, light/dark themes, single-file projects and temp-dir cleanup,
 read-only protection of the demo project, cache/settings locations, low-disk-space
 interception, double-click path detection, folder install paths, removed-item cleanup,
-loading/progress windows, parent→child greying, cache buttons, etc. (groups 1–23).
+loading/progress windows, parent→child greying, cache buttons, version iterate/switch,
+tutorial English coverage, etc. (groups 1–24).
 
 ---
 
@@ -321,6 +336,7 @@ app/                       Designer core (Python, stdlib + Pillow)
 │   ├── project.py         .jianpack data model, loading, derived values, validation, folder install paths
 │   ├── serialize.py       Write to disk (reading lives in project.py)
 │   ├── container.py       Single-file .jianpack pack/unpack/progress/safety checks
+│   ├── versions.py        "Version iterate / switch": multi-version snapshots, retire, lock
 │   ├── assoc.py           .jianpack file association (HKCU, double-click to open)
 │   ├── settings.py        App settings (recent files, language, theme, cache dir…)
 │   ├── paths.py           Path resolution + Desktop directory
@@ -329,6 +345,7 @@ app/                       Designer core (Python, stdlib + Pillow)
 │   ├── nsi.py             Project -> NSIS script (including folder keep-name handling)
 │   ├── assets.py          Encoding conversion + icon/bitmap size checks
 │   ├── textutil.py        Placeholder expansion + NSIS string escaping
+│   ├── signing.py         Code signing (Authenticode, invokes signtool)
 │   └── makensis.py        Locate and invoke makensis.exe
 ├── ui/                    GUI
 │   ├── main_window.py     Main window, step navigation, opening projects (async + loading window)
@@ -341,6 +358,7 @@ app/                       Designer core (Python, stdlib + Pillow)
 │   ├── image_crop_dialog.py   Image cropping
 │   ├── preview.py         Live install preview
 │   ├── build_panel.py     Always-visible bottom-left "Start build" panel (buttons + log)
+│   ├── version_panel.py   Upper-left "Version iterate / switch" panel
 │   ├── tutorial.py / tutorial_content.py  Tutorial window and content
 │   ├── theme.py           Light/dark theme (incl. custom-drawn ✓ checkboxes)
 │   ├── i18n.py            Chinese/English text table

@@ -6,6 +6,7 @@ import tkinter as tk
 from tkinter import ttk
 
 from ...i18n import t as _
+from .. import theme
 from ..integration_dialog import EntryDialog
 from ..widgets import APP_FONT, hint_label, keep_wheel_inside, section
 from .base import StepPage
@@ -27,10 +28,9 @@ class BasicPage(StepPage):
         self.text(identity, "安装目录名", app, "dir_name",
                   hint="装到磁盘上的文件夹名，例如 MyApp。留空则同应用名。"
                        "中文软件建议用英文，中文路径在命令行和日志里容易出问题。")
-        self.text(identity, "版本号 *", app, "version",
-                  hint="显示用版本，例如 1.0.0 / 1.0.0.1")
         self.text(identity, "程序文件版本", app, "file_version",
-                  hint="写进 exe 属性，必须是 a.b.c.d 四段数字。留空则按版本号自动补齐。")
+                  hint="写进 exe 属性，必须是 a.b.c.d 四段数字。留空则按版本号自动补齐。"
+                       "版本号在左上角的「版本迭代 / 切换」里管理。")
         self.text(identity, "内部标识", app, "registry_key",
                   hint="注册表和卸载项用的键名，留空则同安装目录名。只能用字母、数字、- _ .")
 
@@ -69,7 +69,13 @@ class BasicPage(StepPage):
                 known.add(entry.lcid)
 
         listbox = tk.Listbox(box, selectmode="extended", height=6,
-                             exportselection=False, activestyle="none", font=APP_FONT)
+                             exportselection=False, activestyle="none", font=APP_FONT,
+                             background=theme.c("field"), foreground=theme.c("text"),
+                             selectbackground=theme.c("select_bg"),
+                             selectforeground=theme.c("select_fg"),
+                             highlightbackground=theme.c("border"),
+                             highlightcolor=theme.c("accent"),
+                             borderwidth=1, relief="solid")
         for name, _lcid in self._lang_items:
             listbox.insert("end", _(name))
         for index, (_name, lcid) in enumerate(self._lang_items):

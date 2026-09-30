@@ -29,7 +29,7 @@ python aipack.py                                              # 新建工程
 python aipack.py gui demo\feasibility\demo.jianpack             # 打开这个示例工程
 ```
 
-界面按 5 步走：基本信息 → 选择要打包的内容 → 安装设置 → 安装界面 → 快捷方式 → 打包。
+界面按左边 4 步走：基本信息 → 打包内容 → 安装设置 → 安装界面。打包动作在左下角常驻的「开始打包」面板里。
 
 ### 方式 B：命令行
 

@@ -38,6 +38,8 @@ def settings_file() -> Path:
 
 THEMES = ("light", "dark")
 LANGUAGES = ("zh", "en")
+# 日期顺序：年-月-日（默认，中国习惯）/ 月-日-年（美国）/ 日-月-年（欧洲）
+DATE_FORMATS = ("ymd", "mdy", "dmy")
 
 
 @dataclass
@@ -50,6 +52,7 @@ class Settings:
     language: str = "zh"               # "zh" | "en"
     auto_open_last: bool = False       # 启动时自动打开最近一次打开的工程
     cache_dir: str = ""                # 缓存目录；空 = 软件目录下的 data\work
+    date_format: str = "ymd"           # 日期顺序："ymd" | "mdy" | "dmy"
 
     # -- 使用习惯 -----------------------------------------------------------
 
@@ -64,6 +67,7 @@ class Settings:
         self.language = defaults.language
         self.auto_open_last = defaults.auto_open_last
         self.cache_dir = defaults.cache_dir
+        self.date_format = defaults.date_format
 
     # -- 最近打开 -----------------------------------------------------------
 
@@ -113,6 +117,7 @@ def load_settings() -> Settings:
     theme = data.get("theme")
     language = data.get("language")
     cache_dir = data.get("cacheDir")
+    date_format = data.get("dateFormat")
 
     show_welcome = flag("showWelcome", True)
     if migrated:
@@ -129,6 +134,7 @@ def load_settings() -> Settings:
         language=language if language in LANGUAGES else "zh",
         auto_open_last=flag("autoOpenLast", False),
         cache_dir=cache_dir if isinstance(cache_dir, str) else "",
+        date_format=date_format if date_format in DATE_FORMATS else "ymd",
     )
 
 
@@ -145,6 +151,7 @@ def save_settings(settings: Settings) -> None:
             "language": settings.language,
             "autoOpenLast": settings.auto_open_last,
             "cacheDir": settings.cache_dir,
+            "dateFormat": settings.date_format,
         }
         text = json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
         path.write_text(text, encoding="utf-8")

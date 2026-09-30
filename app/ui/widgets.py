@@ -86,3 +86,21 @@ def keep_wheel_inside(widget) -> None:
         return "break"
 
     widget.bind("<MouseWheel>", on_wheel)
+
+
+def set_enabled_tree(widget, on: bool) -> None:
+    """递归启用/禁用一棵控件树里的「可交互控件」（不改文字颜色）。
+
+    用于打包 / 校验期间锁住编辑区，防止用户在后台线程干活时改数据。
+    """
+    for child in widget.winfo_children():
+        try:
+            if isinstance(child, (ttk.Entry, ttk.Combobox, ttk.Button,
+                                  ttk.Checkbutton, ttk.Radiobutton,
+                                  ttk.Scale, ttk.Spinbox, ttk.Treeview)):
+                child.state(["!disabled"] if on else ["disabled"])
+            elif isinstance(child, (tk.Text, tk.Listbox)):
+                child.configure(state="normal" if on else "disabled")
+        except tk.TclError:
+            pass
+        set_enabled_tree(child, on)

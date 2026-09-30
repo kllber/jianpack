@@ -40,6 +40,9 @@ class EntryDialog(tk.Toplevel):
         self.update()
         self.grab_set()
         self.focus_set()
+        # 阻塞到用户点「确定 / 取消」为止：调用方都是构造完就直接读 result，
+        # 不阻塞的话它们会在对话框还开着的时候就往下走（等于什么都没做）。
+        self.wait_window(self)
 
     # -- 界面 ---------------------------------------------------------------
 
