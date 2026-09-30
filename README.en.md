@@ -32,7 +32,7 @@ any runtime required.
 Under the hood it uses **NSIS** as the packaging engine (zlib-style license, allows
 redistribution and commercial use).
 
-![Designer UI](demo/feasibility/screenshots/总览-设计器界面.png)
+![Designer UI](demo/feasibility/screenshots/总览-设计器界面-2x2.png)
 
 ---
 

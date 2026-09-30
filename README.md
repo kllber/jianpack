@@ -34,7 +34,7 @@
 > installers (no .NET / Python runtime needed on the target machine), through a
 > bilingual Chinese / English GUI.*
 
-![设计器界面](demo/feasibility/screenshots/总览-设计器界面.png)
+![设计器界面](demo/feasibility/screenshots/总览-设计器界面-2x2.png)
 
 ---
 

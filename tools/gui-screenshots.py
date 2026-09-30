@@ -111,7 +111,7 @@ def main() -> int:
     window.destroy()
 
     produced = [out_dir / f"gui{i + 1:02d}.png" for i in range(len(STEPS))]
-    montage(produced, out_dir / "总览-设计器界面.png")
+    montage(produced, out_dir / "总览-设计器界面-2x2.png")
     print("完成。")
     return 0
 
