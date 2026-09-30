@@ -464,6 +464,78 @@ def missing_versions(container: str | Path, dest: str | Path) -> list[str]:
     return out
 
 
+def payload_tops_of_dir(directory: str | Path) -> list[str]:
+    """从某个版本目录里的 ``project.json`` 算出它的"打包内容"顶层条目。
+
+    比索引里记的 ``payloadTops`` 可靠 —— 索引里可能是老版本留下的脏数据
+    （比如"没有程序文件"却留着 70MB 的数据块，就是这么来的）。
+    """
+    directory = Path(directory)
+    try:
+        data = json.loads((directory / PROJECT_JSON).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    files = data.get("files")
+    raw = files.get("items") if isinstance(files, dict) else None
+    try:
+        base = directory.resolve()
+    except OSError:
+        return []
+    tops: list[str] = []
+    for entry in (raw or []):
+        if not isinstance(entry, dict):
+            continue
+        rel = str(entry.get("source") or "").strip()
+        if not rel:
+            continue
+        name = Path(rel)
+        top = ""
+        if name.is_absolute():
+            try:
+                parts = name.resolve().relative_to(base).parts
+                top = parts[0] if parts else ""
+            except (ValueError, OSError):
+                top = ""
+        else:
+            parts = [x for x in rel.replace("\\", "/").split("/") if x not in ("", ".")]
+            if parts and parts[0] != "..":
+                top = parts[0]
+        if top and top not in tops:
+            tops.append(top)
+    return tops
+
+
+def block_tops(container: str | Path, version_id: str) -> set[str] | None:
+    """某个版本的数据块里**实际**装了哪些顶层条目（只读中央目录，很快）。
+
+    用它可以判断"索引说没有程序文件、块里其实还有"的脏数据；读不出来就返回 None。
+    """
+    container = Path(container)
+    try:
+        manifest = read_manifest(container)
+    except ProjectFileError:
+        return None
+    for entry in manifest.get("versions") or []:
+        if str(entry.get("id") or "") != version_id:
+            continue
+        try:
+            with container.open("rb") as handle:
+                region = _Region(handle, int(entry.get("off", 0)), int(entry.get("len", 0)))
+                with zipfile.ZipFile(region) as archive:
+                    tops: set[str] = set()
+                    for info in archive.infolist():
+                        if info.is_dir():
+                            continue
+                        name = info.filename.replace("\\", "/")
+                        top = name.split("/", 1)[0]
+                        if top and top not in _BLOCK_EXCLUDE:
+                            tops.add(top)
+                    return tops
+        except (zipfile.BadZipFile, OSError, KeyError, ValueError):
+            return None
+    return None
+
+
 def block_sizes(container: str | Path) -> dict[str, int]:
     """每个版本数据块的字节数（按 id）——"占用"列在版本还没解到磁盘时用它。"""
     try:
@@ -583,10 +655,13 @@ def save(target: str | Path, base_dir: str | Path, versions_json: dict,
                 offset, length = new_blocks[vid]
                 directory = dir_of(vid)
                 if directory.is_dir():
-                    # 刚刚重写过数据块 → 顺手按磁盘实际情况修正"是否含程序文件"
+                    # 刚刚重写过数据块 → 按磁盘实际情况修正"含哪些程序文件"
+                    # （索引里的 payloadTops 可能是旧的脏数据，以工程自己的
+                    #  project.json 为准）
                     item = dict(item)
-                    item["payloadStored"] = _has_payload(
-                        directory, item.get("payloadTops") or [])
+                    tops = payload_tops_of_dir(directory) or list(item.get("payloadTops") or [])
+                    item["payloadTops"] = tops
+                    item["payloadStored"] = _has_payload(directory, tops)
             elif vid in old_blocks:
                 offset, length = old_blocks[vid]
             else:

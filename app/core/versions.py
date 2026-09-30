@@ -523,25 +523,59 @@ class VersionStore:
             pass
 
     def prune(self, project=None) -> list[VersionInfo]:
-        """把被淘汰版本的程序文件删掉，返回被清理的版本。"""
+        """把被淘汰版本的程序文件删掉，返回被清理的版本。
+
+        注意：**不能**只看索引里的 ``payload_stored`` / ``payloadTops`` —— 它们可能
+        是以前"目录还没解出来时"留下的脏数据（索引说没有程序文件、数据块里其实还
+        塞着几十 MB）。这里一律以**磁盘 + 数据块实际情况**为准。
+        """
         stripped: list[VersionInfo] = []
         for item in self.retired_items():
-            if item.id == self.current or not item.payload_stored:
+            if item.id == self.current:
                 continue
             self._ensure_materialized(project, item)
             dest = self.dir_for(item.id)
-            for top in item.payload_tops:
+            # 以"版本自己的 project.json"为准算打包内容（索引里的可能已经过时）
+            tops = container.payload_tops_of_dir(dest) or list(item.payload_tops)
+            changed = False
+            for top in tops:
                 path = dest / top
                 if path.is_dir():
                     _rmtree(path)
+                    changed = True
                 elif path.exists():
                     _unlink(path)
-            item.payload_stored = any(
-                _has_content(dest / top) for top in item.payload_tops)
-            # 这个版本的数据块内容变了（少了程序文件）→ 让保存时重写它
-            self.rebuild.add(item.id)
-            stripped.append(item)
+                    changed = True
+            stored = any(_has_content(dest / top) for top in tops)
+            if (changed or stored != item.payload_stored
+                    or list(item.payload_tops) != tops
+                    or self._block_has_extra(item.id, dest)):
+                item.payload_tops = tops
+                item.payload_stored = stored
+                # 数据块内容变了 → 保存时重写它，把程序文件真正从容器里拿掉
+                self.rebuild.add(item.id)
+                stripped.append(item)
+        if stripped:
+            # 让"要重写这些块"这件事落到 versions.json，保存工程时才读得到
+            self.save()
         return stripped
+
+    def _block_has_extra(self, vid: str, dest: Path) -> bool:
+        """数据块里是不是还装着磁盘上已经没有了的东西（比如被精简掉的程序文件）。
+
+        这是"已淘汰版本还占着几十 MB"的根因：索引标着"没有程序文件"，数据块里
+        却仍然是旧的完整内容。
+        """
+        if self.container_path is None:
+            return False
+        tops = container.block_tops(self.container_path, vid)
+        if not tops:
+            return False
+        try:
+            on_disk = {entry.name for entry in dest.iterdir()} if dest.is_dir() else set()
+        except OSError:
+            return False
+        return bool(tops - on_disk)
 
     def rename(self, project, vid: str, version: str, note: str) -> None:
         """改版本号（可顺带改备注）。
