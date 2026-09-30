@@ -49,7 +49,8 @@ def montage(paths: list[Path], out_path: Path) -> None:
     scale = 0.52
     tw = int(thumbs[0][0].width * scale)
     th = int(thumbs[0][0].height * scale)
-    cols, pad, gap, label_h, top = 3, 22, 16, 30, 62
+    # 2×2 排布（4 个步骤刚好两行两列，比 3+1 更匀称）
+    cols, pad, gap, label_h, top = 2, 26, 22, 30, 66
     rows = (len(thumbs) + cols - 1) // cols
 
     width = pad * 2 + cols * tw + (cols - 1) * gap
