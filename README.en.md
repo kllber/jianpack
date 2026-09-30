@@ -36,361 +36,93 @@ redistribution and commercial use).
 
 ---
 
-## 1. Current version & feature overview (v0.2.0)
+## 1. Meet JianPack
 
-| Area | Capability |
-|---|---|
-| **4-step wizard** | Basic info → Package contents → Install settings (incl. output & build) → Installer UI |
-| **Project file** | `.jianpack` single-file container (essentially a zip: `project.json` + `assets/` + `payload/` …); also compatible with the older "folder project", auto-detected by file header; "Save As" always produces a single file |
-| **Version iterate / switch** | Upper-left panel: keep several versions in one project and switch with one click; **only the last 2 versions (incl. the current one) keep their program files**, older ones are auto-"retired" (still viewable, but can no longer take files or be built); lock / rename / note / delete supported; a brand-new empty project creates its first version first |
-| **Double-click to open** | The packaged build auto-associates `.jianpack` (writes HKCU, no admin needed); double-click goes straight to the main window; a one-click repair/remove is in Preferences |
-| **Package contents** | Add files/folders; **folders keep their own name by default** (can be turned off in the dialog → place contents only, with live preview); include/exclude filters; main program auto-detected; **removing an item also deletes its copy under the project's `payload\`** (external references are left untouched) |
-| **Install settings** | Default/custom install path, allow the user to change it, remember last location, show disk usage; user-data directory; whether to ask about keeping user data on uninstall |
-| **Installer UI** | Text and images per page (Welcome / License / Changelog / Install location / Install options / Finish + header image); License and Changelog support "edit inline" or "import from txt"; **the Install options page also holds the desktop / Start Menu shortcut settings (with custom launch arguments and icon)**; **installer UI language is selectable**; **unchecking a parent greys out its children** |
-| **Start build** | Always-visible bottom-left panel: validate / generate script / start build / open output folder + live log; **build progress window** |
-| **Code signing** | After building, signs the installer with `signtool` (Authenticode); bring your own certificate, leave empty to skip |
-| **System integration** | Advanced drawer in step 3: **file associations / URL protocols / custom registry entries**; written on install, cleaned on uninstall |
-| **App Properties languages** | Step 1 lets you **pick several** languages to list in the installer exe's properties (18 built in; custom name + language ID also supported) |
-| **Auto-start on sign-in** | The Finish page can offer an "auto-start" checkbox (optionally checked by default); when ticked it writes the Run key, cleaned up on uninstall |
-| **Live preview** | Covers the 7 installer pages plus an **App Properties** preview, follows the edited content and the **variant selected in step 3** automatically; toggle with `Ctrl+P` |
-| **Images** | Drop any-format image for icon / header image / welcome image → crop dialog (drag/zoom) → auto-orient, alpha flattened onto white, exported as BMP / multi-size ICO |
-| **Loading feedback** | A **loading window** when opening a project: double-click `.jianpack` / app start uses the icon version, opening from inside the app uses a simplified icon-less version; **it is skipped when reading is fast**, shown otherwise with **real extraction progress** |
-| **UI** | Bilingual Chinese/English; light/dark themes; **checkboxes are custom-drawn ✓** (unaffected by the system theme); **the window can be maximized** (fills the screen, wide window flows into two columns; the default open size/position is unchanged) |
-| **Preferences** | Language / theme / startup habits / file-association repair / cache directory ("use default location" + "clear cache files…") / restore defaults |
-| **Built-in tutorial** | 6 illustrated chapters (Meet JianPack / Strengths & limits / Quick start / Advanced usage / Preferences / FAQ), in both Chinese and English (images generated from the real UI by a script), in a separate non-modal window |
-| **Command line** | `validate` / `generate` / `build` / `pack` / `unpack` |
-| **Engine** | Bundled portable NSIS; produced installers are dependency-free; supports silent install/uninstall `/S` |
-| **Other** | Ships with a read-only demo project; low disk space is caught early; cache/settings travel with the folder (portable) |
+It turns "a ready-made program inside a folder" into an installer — send it to someone
+and they **double-click to install**: no unzipping, no hunting for the exe. Everything is
+done by filling in a few fields and clicking — **no script to write**.
 
----
+The main window has just 4 areas (see the screenshot above):
 
-## 2. Quick start
+- **Versions** (top-left): save one project as several versions and switch back anytime;
+- **Build Steps** (top-right): the table of contents of the 4-step wizard; the editor is right below;
+- **Installer Preview** (middle-left): draws what the installer will look like, updating live as you edit;
+- **Start Build** (bottom-left): validate / generate script / build / open output folder, plus a live log.
 
-### GUI
+## 2. Strengths & positioning
 
-```powershell
-python aipack.py                                     # open (startup window appears first)
-python aipack.py gui demo\feasibility\demo.jianpack    # open a specific project directly
-```
+Compared with tools like Inno Setup Compiler or hand-written NSIS scripts, JianPack takes
+the "good enough and easy to pick up" route:
 
-- **Startup chooser**: New project / Open existing / Recent (the first row is always the
-  bundled "demo project", shown in blue and not removable) / Quit.
-- On first launch a **welcome page** appears (one-line intro + "Open tutorial", a
-  "don't show again" checkbox, and a Chinese/English switch at the bottom-left).
-- Then follow the 5 steps. Click "Start build" on the last page.
+- **No scripting** — every feature is a field or a switch in the UI, so even beginners get a tidy installer;
+- **Bilingual** — both the GUI and the built-in tutorial ship in Chinese and English;
+- **Portable & dependency-free** — the app is one folder with a bundled portable NSIS; copy it to another PC and nothing needs installing;
+- **Single-file project** — icon, program files, UI settings and version history all live in one `.jianpack`;
+- **Versioning** — keep several versions in one project and switch with one click (rare among peers);
+- **What you see is what you get** — a live preview on the left; drop any image format and it is auto-cropped to spec.
 
-![Startup window](demo/feasibility/screenshots/启动窗口-有记录.png)
+To be honest about where it **falls short** today: no script-level customization, no
+incremental upgrade / patch / auto-update, and the set of installer pages is basically
+fixed. If you need those, Inno Setup Compiler will fit better.
 
-### Command line
+![Generated installer](demo/feasibility/screenshots/总览-安装向导全部页面.png)
 
-```powershell
-# 1) Install the NSIS compiler (once; not needed for the packaged build, NSIS is bundled)
-winget install NSIS.NSIS
+## 3. Quick start (4 steps)
 
-# 2) Validate the project
-python -m app validate demo\feasibility\demo.jianpack
+1. Launch it and click "New Project" in the start window; enter a name and location (only **one** `.jianpack` file is created).
+2. Walk the wizard's **4 steps**:
 
-# 3) Generate the script and compile
-python -m app build demo\feasibility\demo.jianpack
-```
+   **① Basic Info** → **② Payload** → **③ Install Settings** → **④ Installer UI**
 
-Or use `aipack.py` from any directory (no dependency on the current directory):
+   (app name, the files to package, install location & output, each page's text and images.)
+3. Click "**Start Build**" in the always-visible bottom-left panel. The installer goes to the **Desktop** by default.
 
-```powershell
-python "D:\...\应用安装向导打包软件项目\aipack.py" build "D:\...\demo.jianpack"
-```
+> **Want more detail?** Press **F1** in the app (or Help → Tutorial): a **6-chapter
+> illustrated tutorial** walks you from "what is this" all the way to advanced tips, in
+> both languages — you can follow along while working.
 
-After `pip install -e .` you can use the `aipack` command directly.
+![Start window](demo/feasibility/screenshots/启动窗口-有记录.png)
 
-### Building standalone exes
+## 4. Features at a glance
 
-```powershell
-python tools\vendor-nsis.py     # copy the system NSIS into vendor\nsis (one time)
-python tools\build-exe.py       # produce the two packages under dist\
-```
+- **Project & versions**: single-file `.jianpack`; version iterate / switch (only the last 2 versions keep their program files, older ones are auto-"retired"); double-click a project file to open it.
+- **Install settings**: default / custom install path, allow the user to change it, remember last location; user data & uninstall prompt; both install modes can be generated at once; silent install/uninstall `/S`.
+- **Installer UI**: text and images for Welcome / License / Changelog / Location / Options / Finish; License & Changelog edited inline or imported from txt; header and welcome images; an **auto-start** checkbox on the Finish page.
+- **System integration & signing**: file associations, URL protocols, custom registry entries (written on install, cleaned on uninstall); automatic code signing (Authenticode, bring your own certificate).
+- **Preview & images**: live preview on the left; drop any image format for the icon / header / welcome image and it is cropped to BMP and a multi-size ICO.
+- **And more**: bilingual UI, light / dark themes, and a command-line build (below).
 
-Output:
-
-```
-dist\
-├── 简包装\     GUI version (double-click to run, includes _internal)
-└── aipack\     CLI version (great for scripting, includes _internal)
-```
-
-**How to distribute: zip up the whole `dist\<folder>` and send it. The recipient just
-double-clicks the exe inside.** No Python, NSIS or any runtime needed on their side.
-
-> **Why a folder and not a single exe**: with `--onefile`, every launch extracts the
-> bundled 4 MB NSIS into a temp directory (which real-time protection then scans
-> file-by-file) — measured at 30+ seconds to start. Switching to onedir brought it to
-> 0.5 seconds. Compressed it's only about 12 MB anyway.
-
-> **When trimming `vendor\nsis`**: do not delete `Contrib\UIs` — MUI2's
-> `MUI_INTERFACE` loads `Contrib\UIs\modern.exe`; deleting it makes compilation fail
-> outright. `makensis` lookup order: explicit path → `MAKENSIS` env var → bundled
-> `vendor\nsis` → system-installed NSIS → `PATH`.
-
----
-
-## 3. UI & workflow highlights
-
-### The 4-step wizard
-
-| Step | What you can do |
-|---|---|
-| 1. Basic info | App name, install directory name, file version, internal identifier, company/author, copyright, homepage, description, program icon (**the version number is managed in the upper-left "Versions" panel**) |
-| 2. Package contents | Add files/folders, adjust the post-install location (**a folder can keep its name or place contents only**), specify the main program, remove items |
-| 3. Install settings | Install path / allow the user to change it / remember last location / disk usage / user data / uninstall prompt; **system integration (advanced)**; **which versions to build**; **output settings** (location / file name / compression); **code signing (advanced)** |
-| 4. Installer UI | Text and images for each page; License/Changelog edited inline or imported from txt; header image; **the Install options page sets the desktop / Start Menu shortcuts**; **the Finish page can offer an "auto-start" checkbox** |
-
-**Starting the build**: an always-visible panel at the **bottom-left** (validate / generate
-script / start build / open output folder + live log) — not a wizard step, clickable anytime.
-
-**Build variants are chosen in step 3 (important)**:
-- **Install for "all users / current user only"**: ticked under "Which versions to build" —
-  **both can be produced at once**. The live preview draws according to the first one ticked.
-- With more than one, the file name automatically gets a `-PerMachine` / `-PerUser` suffix.
-
-### Layout
-
-```
-┌──────────────┬────────────────────────────────────┐
-│ Build steps   │                                    │
-│ 1. Basic info │                                    │
-│ 2. ...        │        Editor (takes all the rest) │
-│ ...           │                                    │
-├──────────────┤                                    │
-│ Preview       │                                    │
-│  [Installer]  │                                    │
-└──────────────┴────────────────────────────────────┘
-```
-
-The left column has a fixed width; the editor takes the remaining width. **When the
-window is wide enough, group boxes automatically flow into two columns** (single column
-when narrow). The window can be **maximized** normally (the maximize button, double-click
-the title bar, or Win+↑) to use the whole screen; toggling the preview or changing settings
-while maximized will not shrink it back.
-
-### Live preview
-
-Always present below the left column. It follows the page you're currently editing, or
-you can pick one from the dropdown; it lists only the pages that **will actually
-appear**. It's drawn to the real layout (window 503×362 etc.), though fonts/line breaks
-may differ by a line or two from the final installer. The menu "View → Show install
-preview" (`Ctrl+P`) toggles it, and the choice is remembered.
+Every option is explained in the in-app tutorial (**F1, 6 chapters**).
 
 ![Live preview](demo/feasibility/screenshots/预览-welcome.png)
 
-### You don't have to make the images yourself
+## 5. Download & run
 
-For the program icon, inner-page header image and welcome image: drop in any format
-(PNG/JPG/BMP/GIF/WEBP), drag/zoom in the crop dialog, see the real result on the right,
-and on confirm it is automatically converted to 150×57 / 164×314 BMP and a 256×256
-multi-size ICO. **The original image is never modified.**
+Get the portable build from [Releases](https://github.com/kllber/jianpack/releases/latest):
+`jianpack-vX.Y.Z-portable.zip`. Unzip and run **`简包装.exe`**; the whole folder can be moved
+around freely. A command-line build is included under `aipack\`.
 
-![Adjusting the header image](demo/feasibility/screenshots/图片裁剪-页头图.png)
+- **Requirements**: Windows 10 / 11 (64-bit); no Python, NSIS or any runtime needed.
+- **Settings & cache** live in `data\` inside the app folder, so it stays portable.
 
-### Loading feedback & build progress
+Command line (`aipack\aipack.exe`):
 
-- **Opening a project**: a loading window appears first (double-click/startup = icon
-  version; opening from inside the app = simplified icon-less version). **If reading is
-  fast (small project) it is skipped**, to avoid a "flash that looks like a bug"; once
-  shown it stays at least ~0.8 seconds and shows real extraction progress.
-- **Starting a build**: an icon progress window appears, showing which variant is being
-  compiled + a scrolling progress bar + the output file name, and closes automatically
-  on completion/failure.
-
-### Preferences (`Ctrl+,`)
-
-UI language (Chinese/English, reloads the UI on switch) · theme (light/dark) · startup
-habits (welcome page, auto-open last project, show preview by default) · file
-association (repair/remove) · cache directory (**"use default location" only clears the
-path, not the files**; **"clear cache files…" deletes cached temporary projects, skipping
-the one in use**) · "restore defaults" = reset.
-
-### Built-in tutorial
-
-Menu "Help → Tutorial" (`F1`): a table of contents on the left and illustrated text on
-the right, in both Chinese and English, in a separate non-modal window that doesn't
-block the main window. The images are generated from the real UI by
-`tools\make-tutorial-images.py`.
-
----
-
-## 4. What the generated installer looks like
-
-A Chinese install wizard: Welcome → License → Changelog → Choose install location →
-Install options → Progress → Finish.
-
-![All installer pages](demo/feasibility/screenshots/总览-安装向导全部页面.png)
-
-Two install modes (both can be produced at once in step 3):
-
-| | For all users | Current user only |
-|---|---|---|
-| Location | `Program Files` | `%LOCALAPPDATA%\Programs` |
-| Privileges | Requires admin (UAC) | No elevation, just double-click |
-| Shortcuts | Visible to all users | Current user only |
-| Registry | `HKLM` | `HKCU` |
-
-- Normal uninstall: written into "Control Panel → Programs and Features", with icon,
-  version and publisher; optionally keep user data.
-- Silent install: `/S` (both install and uninstall).
-- Small: the example package is about 100 KB (excluding your program files).
-- Text variables: `{appName}` `{appVersion}` … are replaced at build time;
-  `$INSTDIR` `$APPDATA` … are replaced by NSIS at install time.
-
-**Output location**: by default it outputs to the **Desktop** (following OneDrive-style
-redirection); step 3 "Output location" can change it to any directory (relative paths are
-resolved against the project file's directory), leave it empty to go back to the Desktop.
-
----
-
-## 5. Portability & data locations
-
-```
-<app folder>\
-├── 简包装.exe
-├── _internal\           runtime (contains assets: icons, tutorial images, demo project; vendor\nsis)
-└── data\                created at runtime
-    ├── settings.json    settings (recent files, language, theme, cache dir…)
-    └── work\            cache: extracted projects + compilation intermediates (cleared on exit)
+```text
+aipack validate  project.jianpack   validate only, no build
+aipack generate  project.jianpack   generate the .nsi script only
+aipack build     project.jianpack   generate and compile the installer
+aipack pack      folder project     pack a project into one .jianpack
+aipack unpack    project.jianpack   unpack a single project into a folder
 ```
 
-Settings, cache and the demo project all live inside the app folder, so the whole folder
-can be moved around freely. Only when the app folder is not writable (e.g. extracted into
-`Program Files`) does it fall back to `%APPDATA%\简包装`. Low disk space is caught early
-with a prompt.
+## 6. License / author
 
----
+- Author: **kllber**　·　GitHub: <https://github.com/kllber>　·　Email: 1394141383@qq.com
+- License: **Apache-2.0** (see [LICENSE](LICENSE) and [NOTICE](NOTICE); third-party components in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md))
 
-## 6. Recent changes (v0.2.0)
+This is an **open-source tool** — feel free to use, share and report issues. Developed with
+assistance from **DeepSeek V4.1 Flash**.
 
-> Everything since v0.1.0 is collected in this release.
-
-**New features**
-- **Version iterate / switch**: keep several versions in one project and switch with one
-  click; only the last 2 versions (incl. the current one) keep their program files, older
-  ones are auto-"retired" (still viewable, but can no longer take files or be built);
-  lock / rename / note / delete supported; a brand-new empty project creates its first version.
-- **Built-in illustrated tutorial rebuilt into 6 chapters** (Meet JianPack / Strengths &
-  limits / Quick start / Advanced usage / Preferences / FAQ), with the Chinese and English
-  image sets regenerated and the number badges re-placed (no longer covering titles).
-- **The window can be maximized / used full-screen**: fills the screen and flows into two
-  columns when wide; toggling the preview while maximized does not shrink it back.
-- **App Properties languages are multi-select + custom** (step 1).
-- **Code signing (Authenticode)**: automatically runs `signtool` after a build (bring your own cert).
-- **System integration (advanced drawer)**: file associations / URL protocols / custom
-  registry entries, written on install and cleaned up on uninstall.
-- **"Auto-start on sign-in"** checkbox on the Finish page (optionally checked by default).
-- **Installer UI language is selectable**; shortcuts can set launch arguments / icon.
-- **Loading window** when opening a project (icon / simplified) + real extraction progress
-  + delayed display; **build progress window**.
-- Package contents: a **"keep folder name" toggle per folder item** (dialog with live preview).
-- **Unchecking a parent greys out its children** (steps 3/4; values retained).
-- Preferences cache: "use default location" + "clear cache files…"; checkboxes changed to
-  **custom-drawn ✓**.
-
-**Behavior changes**
-- Build action and log moved to an **always-visible bottom-left "Start Build" panel**; the
-  wizard went from 5 steps to **4**, with the build settings folded into step 3 "Install settings".
-- "Install mode" became a multi-select in step 3 ("variants to build"), and the preview
-  follows it, eliminating the "preview doesn't match the result" issue.
-- Removing an item now **cleans up the project's `payload\` copy**.
-
-**Important bugs fixed**
-- The version-info block was emitted twice → `VIAddVersionKey ... already defined!`, build failed.
-- In a Chinese IME, typing `p`/`t` then Enter would wrongly trigger "Tutorial"/"Build".
-- Scrolling the language / system-integration lists also scrolled the whole page.
-- Tutorial screenshots were offset on high-DPI screens.
-- In English mode the App Properties preview tab labels and step 3 "Output location" still showed Chinese.
-
----
-
-## 7. Verification / self-test (must run after changes)
-
-```powershell
-python tools\self-test.py                        # regression self-test: must be 0 failures, clean stderr
-python -m app validate demo\feasibility\demo.jianpack
-python -m app build    demo\feasibility\demo.jianpack
-powershell -ExecutionPolicy Bypass -File demo\feasibility\verify.ps1   # 15/15
-python tools\gui-build-test.py demo\feasibility\demo.jianpack            # actually run a build in the GUI
-python tools\build-exe.py                                              # exes under dist\ don't depend on system NSIS
-```
-
-`self-test.py` covers: lossless project read/write, page-by-page UI walkthrough, startup
-flow, image crop/conversion, embedded text, preview linkage, layout boundaries, tutorial
-window, preferences, light/dark themes, single-file projects and temp-dir cleanup,
-read-only protection of the demo project, cache/settings locations, low-disk-space
-interception, double-click path detection, folder install paths, removed-item cleanup,
-loading/progress windows, parent→child greying, cache buttons, version iterate/switch,
-tutorial English coverage, etc. (groups 1–24).
-
----
-
-## 8. Directory structure
-
-```
-app/                       Designer core (Python, stdlib + Pillow)
-├── core/                  Project layer
-│   ├── project.py         .jianpack data model, loading, derived values, validation, folder install paths
-│   ├── serialize.py       Write to disk (reading lives in project.py)
-│   ├── container.py       Single-file .jianpack pack/unpack/progress/safety checks
-│   ├── versions.py        "Version iterate / switch": multi-version snapshots, retire, lock
-│   ├── assoc.py           .jianpack file association (HKCU, double-click to open)
-│   ├── settings.py        App settings (recent files, language, theme, cache dir…)
-│   ├── paths.py           Path resolution + Desktop directory
-│   └── errors.py          Error types
-├── engine/                Packaging layer
-│   ├── nsi.py             Project -> NSIS script (including folder keep-name handling)
-│   ├── assets.py          Encoding conversion + icon/bitmap size checks
-│   ├── textutil.py        Placeholder expansion + NSIS string escaping
-│   ├── signing.py         Code signing (Authenticode, invokes signtool)
-│   └── makensis.py        Locate and invoke makensis.exe
-├── ui/                    GUI
-│   ├── main_window.py     Main window, step navigation, opening projects (async + loading window)
-│   ├── splash.py          Loading window / build progress window (icon and simplified variants)
-│   ├── start_dialog.py    Startup chooser
-│   ├── welcome_dialog.py  Startup welcome page
-│   ├── preferences_dialog.py  Preferences (incl. cache buttons)
-│   ├── new_project_dialog.py  New project
-│   ├── item_dest_dialog.py    Change install location + "keep folder name"
-│   ├── image_crop_dialog.py   Image cropping
-│   ├── preview.py         Live install preview
-│   ├── build_panel.py     Always-visible bottom-left "Start build" panel (buttons + log)
-│   ├── version_panel.py   Upper-left "Version iterate / switch" panel
-│   ├── tutorial.py / tutorial_content.py  Tutorial window and content
-│   ├── theme.py           Light/dark theme (incl. custom-drawn ✓ checkboxes)
-│   ├── i18n.py            Chinese/English text table
-│   ├── resources.py / state.py / widgets.py
-│   └── pages/             The 4 step pages (base.py holds the generic "grey out children" mechanism)
-├── checks.py              Unified validation entry (shared by CLI and GUI)
-├── cli.py                 Command-line entry
-└── __main__.py            python -m app
-
-docs/工程文件格式.md        .jianpack spec (field quick reference, validation rules, NSIS mapping)
-tools/                     Dev & acceptance scripts (see above)
-demo/feasibility/          Feasibility demo (also the generator's first test case)
-data/                      The software's own data (created at runtime)
-assets/                    App icons + demo + tutorial images
-design/简装-图标/          Icon design drafts
-vendor/nsis/               Portable NSIS shipped with the app (zlib-style license)
-dist/                      Build output
-```
-
----
-
-## 9. Author / open source
-
-- Author: **kllber**
-- GitHub: <https://github.com/kllber>
-- Email: 1394141383@qq.com
-- License: **Apache-2.0** (see [LICENSE](LICENSE) and [NOTICE](NOTICE))
-
-This is an **open-source tool** — use it, distribute it, and report issues. Development
-was assisted by **DeepSeek V4.1 Flash**.
-
-> **Disclaimer**: This software is provided "as is", without any express or implied
-> warranty. Make sure you have the legal right to whatever you package, and comply with
-> all applicable laws and regulations; the user bears any direct or indirect consequences
-> of using this software.
+> **Disclaimer**: provided "as is", without warranty of any kind. Make sure you have the
+> right to package the content and comply with applicable laws; the author is not liable for
+> any direct or indirect consequences of using this software.
