@@ -493,7 +493,12 @@ class VersionStore:
         #    - 目标是「已淘汰」（程序文件已被清掉）→ 工程里就**没有**程序文件，
         #      界面会清空「打包内容」并禁止再加，绝不让上一版的文件留在那里冒充。
         retired = self.is_retired(target_id)
-        has_payload = any(_has_content(target_dir / top) for top in target.payload_tops)
+        # 目标版本自己的 project.json 比索引里的 payloadTops 可靠
+        # （索引里可能是老版本留下的脏数据，见 3.3③）
+        tops = container.payload_tops_of_dir(target_dir) or list(target.payload_tops)
+        if tops:
+            target.payload_tops = tops
+        has_payload = any(_has_content(target_dir / top) for top in tops)
         _move_content(target_dir, self.base_dir, set())
         _rmtree(target_dir)
 

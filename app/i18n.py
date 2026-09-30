@@ -1863,6 +1863,7 @@ EN: dict[str, str] = {
     "安全": "Security",
     "详细信息": "Details",
     "以前的版本": "Previous Versions",
+    "加载中": "Loading…",
 
     # -- 版本号改名（版本面板「改版本号…」）--
     "修改版本号": "Edit version",

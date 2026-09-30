@@ -89,6 +89,7 @@ class MainWindow(tk.Tk):
         self._preview_job = None
         self._jobs: set[str] = set()      # 其它延时动作，销毁时要一并取消
         self._load_job = None             # 后台读工程时的轮询句柄
+        self._loading_project = None      # 后台正在读、还没交进来的工程（关窗时要清掉）
         self._version_job = None          # 后台跑版本操作时的轮询句柄
         self._version_busy = False        # 版本操作进行中（期间冻结界面/预览）
         self._splash = None               # 当前的加载提示窗口
@@ -289,8 +290,11 @@ class MainWindow(tk.Tk):
 
         def work() -> None:
             try:
-                results["project"] = load_project(path, progress=report,
-                                                  background_materialize=True)
+                project = load_project(path, progress=report,
+                                       background_materialize=True)
+                results["project"] = project
+                # 记一下：万一这时用户把窗口关了，destroy() 好把这个临时目录清掉
+                self._loading_project = project
             except BaseException as exc:         # noqa: BLE001 - 原样带回主线程
                 results["error"] = exc
             finally:
@@ -355,6 +359,7 @@ class MainWindow(tk.Tk):
                 on_fail()
             return
         self.app.adopt(results["project"])
+        self._loading_project = None
         self._apply_project(path)
         if on_done is not None:
             on_done()
@@ -1173,6 +1178,13 @@ class MainWindow(tk.Tk):
         if self._splash is not None:
             self._splash.close()
             self._splash = None
+        pending = self._loading_project
+        if pending is not None and pending is not self.app.project:
+            try:
+                pending.cleanup()     # 刚读完还没交进来的工程：别把临时目录留下
+            except Exception:         # noqa: BLE001
+                pass
+        self._loading_project = None
         if self._preview_job is not None:
             try:
                 self.after_cancel(self._preview_job)

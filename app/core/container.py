@@ -443,6 +443,9 @@ def materialize(container: str | Path, dest: str | Path, version_id: str,
             return out
         state = {"done": 0, "total": 1}
         with container.open("rb") as handle:
+            _count, total_size = _block_file_count(
+                handle, int(entry.get("off", 0)), int(entry.get("len", 0)))
+            _ensure_space(out, total_size, _("解开这个版本"))
             _extract_block(handle, int(entry.get("off", 0)), int(entry.get("len", 0)),
                            out, root, state, None, should_stop)
         return out
@@ -706,6 +709,11 @@ def set_current(path: str | Path, versions_json: dict) -> None:
         return
     items = [it for it in (versions_json.get("items") or []) if isinstance(it, dict)]
     metas = {str(it.get("id")): it for it in items if it.get("id")}
+    if not metas and (manifest.get("versions") or []):
+        # 传进来的清单是空的（多半是 versions.json 丢了 / 读坏了），而索引里明明有版本
+        # —— 照它删会把所有版本的数据块变成垃圾（再一压实就真没了）。
+        # 宁可这次不更新索引，也不能弄丢用户的版本。
+        return
     versions = []
     for entry in manifest.get("versions") or []:
         vid = str(entry.get("id") or "")
@@ -748,32 +756,50 @@ def _maybe_compact(path: Path, manifest: dict) -> None:
     _compact(path, manifest)
 
 
+def _drop_file(path: Path) -> None:
+    """删一个文件，失败也不抛（清理临时文件用）。"""
+    try:
+        path.unlink(missing_ok=True)
+    except OSError:
+        pass
+
+
 def _compact(path: Path, manifest: dict) -> None:
     tmp = path.with_name(path.name + ".tmp")
-    blocks: list[tuple[dict, int, int]] = []
-    with tmp.open("wb") as out:
-        _write_header(out, 0, 0)
-        out.seek(HEADER_SIZE)
-        new_manifest = dict(manifest)
-        data = manifest.get("data")
-        if data:
+    try:
+        with tmp.open("wb") as out:
+            _write_header(out, 0, 0)
+            out.seek(HEADER_SIZE)
+            new_manifest = dict(manifest)
+            data = manifest.get("data")
+            if data:
+                offset = out.tell()
+                _copy_region(path, int(data["off"]), int(data["len"]), out)
+                new_manifest["data"] = {"off": offset, "len": int(data["len"])}
+            versions = []
+            for entry in manifest.get("versions") or []:
+                item = dict(entry)
+                offset = out.tell()
+                _copy_region(path, int(entry["off"]), int(entry["len"]), out)
+                item["off"] = offset
+                versions.append(item)
+            new_manifest["versions"] = versions
+            payload = json.dumps(new_manifest, ensure_ascii=False, indent=1).encode("utf-8")
             offset = out.tell()
-            _copy_region(path, int(data["off"]), int(data["len"]), out)
-            new_manifest["data"] = {"off": offset, "len": int(data["len"])}
-        versions = []
-        for entry in manifest.get("versions") or []:
-            item = dict(entry)
-            offset = out.tell()
-            _copy_region(path, int(entry["off"]), int(entry["len"]), out)
-            item["off"] = offset
-            versions.append(item)
-        new_manifest["versions"] = versions
-        payload = json.dumps(new_manifest, ensure_ascii=False, indent=1).encode("utf-8")
-        offset = out.tell()
-        out.write(payload)
-        _write_header(out, offset, len(payload))
-        out.flush()
-    os.replace(tmp, path)
+            out.write(payload)
+            _write_header(out, offset, len(payload))
+            out.flush()
+    except OSError:
+        _drop_file(tmp)                 # 写临时文件都失败 → 放弃本次压实
+        return
+    try:
+        os.replace(tmp, path)
+    except OSError:
+        # Windows 上"文件正被别的句柄打开"时不允许替换 —— 最常见的是打开工程后
+        # 后台正在解压其它版本（它开着这个容器在读）。这时**数据块并没有变**，
+        # 只是文件里还留着垃圾，下次保存再压实即可；绝不能把异常抛出去，
+        # 更不能留下 .tmp 残骸。
+        _drop_file(tmp)
 
 
 # ---------------------------------------------------------------------------

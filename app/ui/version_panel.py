@@ -170,7 +170,7 @@ class VersionPanel(ttk.Frame):
             date = _fmt_date(item.created_at, date_format)
             self.tree.insert("", "end", iid=item.id,
                              values=(name, date, state,
-                                     _size_text(size) if size is not None else "…",
+                                     _size_text(size) if size is not None else _("加载中"),
                                      item.note),
                              tags=("current",) if is_current else ())
 
@@ -225,7 +225,10 @@ class VersionPanel(ttk.Frame):
                 if missing and project.is_container:
                     sizes = container.block_sizes(project.source_path)
                     for vid in missing:
-                        results[vid] = sizes.get(vid, 0)
+                        # 读索引失败（例如它正被改写）时**不要**写 0，
+                        # 保持"加载中"，下次刷新会补上。
+                        if vid in sizes:
+                            results[vid] = sizes[vid]
             except Exception:  # noqa: BLE001 - 统计失败不该影响界面
                 pass
             self._size_queue.put(results)
