@@ -81,7 +81,7 @@ fixed. If you need those, Inno Setup Compiler will fit better.
 > illustrated tutorial** walks you from "what is this" all the way to advanced tips, in
 > both languages — you can follow along while working.
 
-![Start window](demo/feasibility/screenshots/启动窗口-有记录.png)
+![One project = one file](assets/tutorial/en/t13-project.png)
 
 ## 4. Features at a glance
 
@@ -93,8 +93,6 @@ fixed. If you need those, Inno Setup Compiler will fit better.
 - **And more**: bilingual UI, light / dark themes, and a command-line build (below).
 
 Every option is explained in the in-app tutorial (**F1, 6 chapters**).
-
-![Live preview](demo/feasibility/screenshots/预览-welcome.png)
 
 ## 5. Download & run
 
