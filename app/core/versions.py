@@ -165,6 +165,33 @@ def _copy_content(src: Path, dest: Path, exclude: set[str]) -> None:
             shutil.copy2(entry, target)
 
 
+def _move_content(src: Path, dest: Path, exclude: set[str]) -> None:
+    """把 ``src`` 里的内容**移动**进 ``dest``（跳过 ``exclude`` 里的顶层名字）。
+
+    同一块盘上的 rename 只是改一条目录记录，几乎不搬数据 —— 版本切换靠它做到"秒切"。
+    万一 rename 失败（跨盘、被占用等），退回"复制 + 删除"，保证结果一致。
+    """
+    dest.mkdir(parents=True, exist_ok=True)
+    for entry in list(src.iterdir()):
+        if entry.name in exclude:
+            continue
+        target = dest / entry.name
+        if target.exists():
+            if target.is_dir():
+                _rmtree(target)
+            else:
+                _unlink(target)
+        try:
+            os.replace(entry, target)
+        except OSError:
+            if entry.is_dir():
+                shutil.copytree(entry, target, dirs_exist_ok=True)
+                _rmtree(entry)
+            else:
+                shutil.copy2(entry, target)
+                _unlink(entry)
+
+
 def _force_remove(func, path, _excinfo) -> None:
     """删除失败时的兜底：去掉只读属性再试一次。
 
@@ -358,19 +385,27 @@ class VersionStore:
 
     # -- 操作 ---------------------------------------------------------------
 
-    def freeze_current(self, project) -> None:
-        """把工程根目录的当前内容，原样存成"当前版本"的快照。"""
-        item = self.ensure_current(project)
-        dest = self.dir_for(item.id)
-        _rmtree(dest)
-        dest.mkdir(parents=True, exist_ok=True)
-        _copy_content(self.base_dir, dest, _EXCLUDE_SNAPSHOT)
+    def _refresh_payload_meta(self, item: VersionInfo, project, dest: Path) -> None:
+        """把版本记录的元信息按快照落地后的实际情况更新一遍。"""
         item.version = project.app.version
         item.file_version = project.app.file_version
         item.label = item.label or f"v{project.app.version}"
         item.created_at = item.created_at or _now()
         item.payload_tops = _payload_tops(project, dest)
         item.payload_stored = any(_has_content(dest / top) for top in item.payload_tops)
+
+    def freeze_current(self, project) -> None:
+        """把工程根目录的当前内容**复制**一份，存成"当前版本"的快照。
+
+        这里用复制而不用移动：调用方是「新建版本」，新版本还要接着用原来的
+        图标 / 页头图等资源。（"切换版本"的归档走 :meth:`switch_to` 里的移动。）
+        """
+        item = self.ensure_current(project)
+        dest = self.dir_for(item.id)
+        _rmtree(dest)
+        dest.mkdir(parents=True, exist_ok=True)
+        _copy_content(self.base_dir, dest, _EXCLUDE_SNAPSHOT)
+        self._refresh_payload_meta(item, project, dest)
 
     def new_version(self, project, version: str, file_version: str = "",
                     note: str = "") -> VersionInfo:
@@ -429,16 +464,21 @@ class VersionStore:
                 _("版本「{name}」的存档已经不存在了，无法切换。").format(
                     name=target.display()))
 
-        # 1. 先把当前版本冻结下来，别丢
-        self.freeze_current(project)
-        # 2. 用目标的快照替换工程根目录。程序文件也一起换掉：
+        # 1. 把当前版本**改名**归档：同盘 rename，几乎不搬数据（比"复制一趟"快得多）。
+        current = self.ensure_current(project)
+        current_dir = self.dir_for(current.id)
+        _rmtree(current_dir)
+        current_dir.mkdir(parents=True, exist_ok=True)
+        _move_content(self.base_dir, current_dir, _EXCLUDE_SNAPSHOT)
+        self._refresh_payload_meta(current, project, current_dir)
+
+        # 2. 用目标的快照**改名**替换工程根目录。程序文件也一起换掉：
         #    - 目标带程序文件 → 用它的；
         #    - 目标是「已淘汰」（程序文件已被清掉）→ 工程里就**没有**程序文件，
         #      界面会清空「打包内容」并禁止再加，绝不让上一版的文件留在那里冒充。
         retired = self.is_retired(target_id)
         has_payload = any(_has_content(target_dir / top) for top in target.payload_tops)
-        _clear_content(self.base_dir, set(_LIVE_KEEP))
-        _copy_content(target_dir, self.base_dir, set())
+        _move_content(target_dir, self.base_dir, set())
         _rmtree(target_dir)
 
         self.current = target_id
