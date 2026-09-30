@@ -27,6 +27,7 @@ from datetime import datetime
 from pathlib import Path
 
 from ..i18n import t as _
+from . import container
 from .errors import ProjectFileError
 
 VERSIONS_JSON = "versions.json"
@@ -299,6 +300,8 @@ class VersionStore:
     keep: int = DEFAULT_KEEP
     current: str = ""
     items: list[VersionInfo] = field(default_factory=list)
+    container_path: Path | None = None                # 单文件容器（新格式）的路径
+    rebuild: set[str] = field(default_factory=set)    # 需要重新写数据块的版本 id
 
     # -- 查询 ---------------------------------------------------------------
 
@@ -358,18 +361,29 @@ class VersionStore:
 
     # -- 清单读写 -----------------------------------------------------------
 
-    def save(self) -> None:
-        path = self.base_dir / VERSIONS_JSON
-        payload = {
+    def to_json(self) -> dict:
+        return {
             "keep": self.keep,
             "current": self.current,
             "items": [item.to_dict() for item in self.items],
+            "rebuild": sorted(self.rebuild),
         }
+
+    def save(self) -> None:
+        path = self.base_dir / VERSIONS_JSON
+        payload = self.to_json()
         text = json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
         try:
             path.write_text(text, encoding="utf-8")
         except OSError as exc:
             raise ProjectFileError(_("保存版本清单失败：{exc}").format(exc=exc)) from exc
+        # 单文件容器：把"谁当前 + 各版本元信息"写进容器索引。
+        # 这一步**只改索引**（数据块原地不动），所以切换版本几乎是瞬时的。
+        if self.container_path is not None and Path(self.container_path).is_file():
+            try:
+                container.set_current(self.container_path, payload)
+            except Exception:  # noqa: BLE001 - 索引更新失败不该让版本操作整个失败
+                pass
 
     def ensure_current(self, project) -> VersionInfo:
         """工程还没登记过版本时，把当前状态登记成第一个版本（不写盘）。"""
@@ -459,6 +473,12 @@ class VersionStore:
             return target
 
         target_dir = self.dir_for(target_id)
+        if not target_dir.is_dir() and self.container_path is not None:
+            # 数据块还没解到磁盘（打开时只解了当前版本）→ 现在按需解开它
+            try:
+                container.materialize(self.container_path, self.base_dir, target_id)
+            except ProjectFileError:
+                pass
         if not target_dir.is_dir():
             raise ProjectFileError(
                 _("版本「{name}」的存档已经不存在了，无法切换。").format(
@@ -505,6 +525,8 @@ class VersionStore:
                     _unlink(path)
             item.payload_stored = any(
                 _has_content(dest / top) for top in item.payload_tops)
+            # 这个版本的数据块内容变了（少了程序文件）→ 让保存时重写它
+            self.rebuild.add(item.id)
             stripped.append(item)
         return stripped
 
@@ -537,7 +559,10 @@ class VersionStore:
 def load_store(project) -> VersionStore:
     """读取工程里的版本清单（不会写入磁盘；没有就返回空清单）。"""
     base = project.base_dir
-    store = VersionStore(base_dir=base)
+    is_container = bool(getattr(project, "is_container", False))
+    store = VersionStore(
+        base_dir=base,
+        container_path=(Path(project.source_path) if is_container else None))
     path = base / VERSIONS_JSON
     if not path.is_file():
         return store
@@ -557,6 +582,9 @@ def load_store(project) -> VersionStore:
     raw = data.get("items")
     if isinstance(raw, list):
         store.items = [VersionInfo.from_dict(x) for x in raw if isinstance(x, dict)]
+    raw_rebuild = data.get("rebuild")
+    if isinstance(raw_rebuild, list):
+        store.rebuild = {str(x) for x in raw_rebuild}
     return store
 
 
@@ -594,7 +622,13 @@ def version_size(project, item) -> int:
     store = load_store(project)
     if item.id == store.current:
         return folder_size(project.base_dir, skip={VERSIONS_DIR, "build"})
-    return folder_size(store.dir_for(item.id))
+    directory = store.dir_for(item.id)
+    if directory.is_dir():
+        return folder_size(directory)
+    if store.container_path is not None:
+        # 数据块还没解到磁盘 → 用容器里记的块大小
+        return container.block_sizes(store.container_path).get(item.id, 0)
+    return 0
 
 
 def version_numbers(project) -> list[str]:

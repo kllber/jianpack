@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/kllber/jianpack/releases/latest"><img alt="Version" src="https://img.shields.io/badge/version-0.2.0-2ea44f"></a>
+  <a href="https://github.com/kllber/jianpack/releases/latest"><img alt="Version" src="https://img.shields.io/badge/version-1.0.0-2ea44f"></a>
   <a href="LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue"></a>
   <img alt="Platform: Windows 10 / 11" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D6">
   <img alt="Python 3.10+" src="https://img.shields.io/badge/python-3.10%2B-3776AB">
@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/kllber/jianpack/releases/latest"><img alt="Download JianPack v0.2.0" src="https://img.shields.io/badge/Download-JianPack%20v0.2.0-2ea44f?style=for-the-badge&logo=github&logoColor=white"></a>
+  <a href="https://github.com/kllber/jianpack/releases/latest"><img alt="Download JianPack v1.0.0" src="https://img.shields.io/badge/Download-JianPack%20v1.0.0-2ea44f?style=for-the-badge&logo=github&logoColor=white"></a>
 </p>
 
 ---

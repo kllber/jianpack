@@ -1125,9 +1125,14 @@ def load_project(path: str | Path, progress=None) -> Project:
             raise
         raw = (work_dir / container.PROJECT_JSON).read_bytes()
         base_dir = work_dir
-    else:
+    elif kind == "json":
+        # 老的「文件夹工程」（纯 JSON）：只留给开发 / 自检用，不是对外格式。
         raw = source.read_bytes()
         base_dir = source.parent
+    else:
+        raise ProjectFileError(_(
+            "这个 .jianpack 不是有效的工程文件。\n"
+            "（v1.0.0 起 .jianpack 换用了新的单文件格式；旧的 zip 版工程需要用转换脚本重新生成。）"))
 
     if raw[:3] == b"\xef\xbb\xbf":
         if work_dir is not None:

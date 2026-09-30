@@ -17,6 +17,7 @@ import threading
 import tkinter as tk
 from tkinter import messagebox, ttk
 
+from ..core import container
 from ..core.serialize import save_project
 from ..core.versions import (DEFAULT_KEEP, VERSIONS_DIR, VersionStore,
                              bump_version, folder_size, is_blank_project,
@@ -214,8 +215,17 @@ class VersionPanel(ttk.Frame):
             results: dict[str, int] = {}
             try:
                 results[current] = folder_size(base, skip={VERSIONS_DIR, "build"})
+                missing: list[str] = []
                 for vid, path in others:
-                    results[vid] = folder_size(path)
+                    if path.is_dir():
+                        results[vid] = folder_size(path)
+                    else:
+                        # 数据块还没解到磁盘（懒解压）→ 用容器里记的块大小
+                        missing.append(vid)
+                if missing and project.is_container:
+                    sizes = container.block_sizes(project.source_path)
+                    for vid in missing:
+                        results[vid] = sizes.get(vid, 0)
             except Exception:  # noqa: BLE001 - 统计失败不该影响界面
                 pass
             self._size_queue.put(results)
@@ -408,12 +418,9 @@ class VersionPanel(ttk.Frame):
             return
 
         def work():
+            # switch_to 内部已经把磁盘上的版本目录"改名交换"，并更新了容器索引
+            # （只改索引，数据块原地不动），所以这里不用再整包重写容器。
             self._store.switch_to(project, vid)
-            # 注意：切换后内存里的 project 还是"旧版本"的，不能直接 save_project(project)
-            # ——那会把目标的配置覆盖掉。先从磁盘重读（拿到目标版本的配置）再落盘。
-            from ..core.project import reload_project
-            fresh = reload_project(project)
-            save_project(fresh)
             return True
 
         def done(_value, error):
@@ -507,8 +514,9 @@ class VersionPanel(ttk.Frame):
                 parent=self.winfo_toplevel(), icon=messagebox.WARNING):
             return
         def work():
+            # delete() 里会写版本清单 + 更新容器索引（只改索引）；被删版本的数据块
+            # 变成垃圾，等下次保存时自动压实。
             self._store.delete(vid)
-            save_project(project)          # 把容器也更新一下
             return True
 
         def done(_value, error):

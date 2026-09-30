@@ -205,6 +205,19 @@ def project_to_dict(project: Project) -> dict:
     }
 
 
+def _read_versions_json(base_dir: Path) -> dict:
+    """读工作目录里的 versions.json（没有就给出一个空清单）。"""
+    path = base_dir / "versions.json"
+    if path.is_file():
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                return data
+        except (OSError, json.JSONDecodeError):
+            pass
+    return {"keep": 2, "current": "", "items": [], "rebuild": []}
+
+
 def save_project(project: Project, path: str | Path | None = None,
                  container_mode: bool | None = None) -> Path:
     """把工程写到 ``path``（默认写回原路径）。
@@ -229,7 +242,11 @@ def save_project(project: Project, path: str | Path | None = None,
     if container_mode:
         project.base_dir.mkdir(parents=True, exist_ok=True)
         (project.base_dir / container.PROJECT_JSON).write_bytes(text.encode("utf-8"))
-        container.pack(project.base_dir, target)
+        versions_json = _read_versions_json(project.base_dir)
+        source = project.source_path if project.is_container else None
+        manifest = container.save(target, project.base_dir, versions_json, source=source)
+        # 数据块已经写好了 → 把工作目录里的 rebuild 标记清掉
+        container.sync_versions_file(project.base_dir, manifest)
         project.is_container = True
         project.source_path = target
     else:
