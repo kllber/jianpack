@@ -14,7 +14,9 @@
 
 from __future__ import annotations
 
+import queue
 import sys
+import threading
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
@@ -55,6 +57,7 @@ class PreferencesDialog(tk.Toplevel):
         self.preview_var = tk.BooleanVar(value=settings.show_preview)
         self.auto_last_var = tk.BooleanVar(value=settings.auto_open_last)
         self.date_var = tk.StringVar(value=settings.date_format)
+        self._cache_job = None            # 缓存占用统计的后台轮询句柄
 
         self.title(_("首选项 / 设置"))
         self.resizable(True, True)
@@ -255,45 +258,88 @@ class PreferencesDialog(tk.Toplevel):
         except OSError as exc:
             messagebox.showerror(_("打不开缓存目录"), str(exc), parent=self)
 
-    def _refresh_cache_info(self) -> None:
-        """把「缓存实际在哪、占多大」显示出来，别让它悄悄占空间。"""
+    def _set_cache_text(self, text: str) -> None:
+        try:
+            self.cache_info.configure(text=text)
+        except tk.TclError:
+            pass
+
+    def _cache_scan(self, callback) -> None:
+        """在后台数缓存目录，完成后回主线程调用 ``callback(root, entries, total)``。
+
+        缓存里常常是「解开的一整个工程」（几千个文件），同步统计会把窗口卡住
+        —— 所以先显示占位文字，统计完再回填。``entries`` 是 ``(路径, 字节数)``。
+        """
         from ..core import container
 
         root = container.cache_root()
-        dirs: list[Path] = []
-        total = 0
-        if root.is_dir():
-            for entry in root.iterdir():
-                try:
-                    if not entry.is_dir() or not entry.name.startswith(container.WORK_PREFIX):
-                        continue
-                except OSError:
-                    continue
-                dirs.append(entry)
-                for path in entry.rglob("*"):
-                    try:
-                        if path.is_file():
-                            total += path.stat().st_size
-                    except OSError:
-                        pass
-        try:
-            self.cache_info.configure(
-                text=_("当前缓存位置：{path}\n其中临时工程 {n} 个，约 {size}。").format(
-                    path=root, n=len(dirs), size=_size_text(total)))
-        except tk.TclError:
-            pass
+        if self._cache_job is not None:
+            try:
+                self.after_cancel(self._cache_job)
+            except tk.TclError:
+                pass
+            self._cache_job = None
+
+        result: "queue.Queue" = queue.Queue()
+
+        def work() -> None:
+            entries: list[tuple[Path, int]] = []
+            try:
+                if root.is_dir():
+                    for entry in root.iterdir():
+                        try:
+                            if not entry.is_dir() or not entry.name.startswith(container.WORK_PREFIX):
+                                continue
+                        except OSError:
+                            continue
+                        size = 0
+                        for path in entry.rglob("*"):
+                            try:
+                                if path.is_file():
+                                    size += path.stat().st_size
+                            except OSError:
+                                pass
+                        entries.append((entry, size))
+            except Exception:  # noqa: BLE001 - 统计失败不该影响窗口
+                pass
+            result.put((root, entries))
+
+        threading.Thread(target=work, daemon=True).start()
+
+        def poll() -> None:
+            try:
+                if not self.winfo_exists():
+                    return
+            except tk.TclError:
+                return
+            try:
+                root2, entries = result.get_nowait()
+            except queue.Empty:
+                self._cache_job = self.after(120, poll)
+                return
+            self._cache_job = None
+            callback(root2, entries)
+
+        self._cache_job = self.after(0, poll)
+
+    def _refresh_cache_info(self) -> None:
+        """把「缓存实际在哪、占多大」显示出来，别让它悄悄占空间。"""
+        self._set_cache_text(_("正在统计缓存占用…"))
+        self._cache_scan(self._show_cache_info)
+
+    def _show_cache_info(self, root, entries) -> None:
+        total = sum(size for _path, size in entries)
+        self._set_cache_text(
+            _("当前缓存位置：{path}\n其中临时工程 {n} 个，约 {size}。").format(
+                path=root, n=len(entries), size=_size_text(total)))
 
     def _clear_cache(self) -> None:
         """删掉缓存目录里本软件产生的「临时工程」（跳过当前正在用的那个）。
 
         只删名字以 ``简包装-工程-`` 开头的目录，别的东西（用户自己放进来的）
         一律不动；当前打开的工程正在用的目录也跳过，免得删到自己在用的文件。
+        统计放后台做，避免点一下就卡住。
         """
-        import shutil
-
-        from ..core import container
-
-        root = container.cache_root()
         active = None
         try:
             state = getattr(self.master, "app", None)
@@ -302,44 +348,48 @@ class PreferencesDialog(tk.Toplevel):
         except Exception:  # noqa: BLE001 - 拿不到就当没有正在用的
             active = None
         if active is not None:
-            active = Path(active).resolve()
+            try:
+                active = Path(active).resolve()
+            except OSError:
+                active = None
 
-        entries = []
-        if root.is_dir():
-            for entry in root.iterdir():
-                try:
-                    if not entry.is_dir() or not entry.name.startswith(container.WORK_PREFIX):
-                        continue
-                    if active is not None and entry.resolve() == active:
-                        continue
-                except OSError:
-                    continue
-                entries.append(entry)
+        self._set_cache_text(_("正在统计缓存…"))
+
+        def done(root, entries) -> None:
+            kept = []
+            for path, size in entries:
+                if active is not None:
+                    try:
+                        if path.resolve() == active:
+                            continue
+                    except OSError:
+                        pass
+                kept.append((path, size))
+            self._confirm_clear(root, kept)
+
+        self._cache_scan(done)
+
+    def _confirm_clear(self, root, entries) -> None:
+        import shutil
 
         if not entries:
             messagebox.showinfo(_("清空缓存"), _("缓存里没有可清理的内容。"), parent=self)
+            self._refresh_cache_info()
             return
 
-        total = 0
-        for entry in entries:
-            for path in entry.rglob("*"):
-                try:
-                    if path.is_file():
-                        total += path.stat().st_size
-                except OSError:
-                    pass
-
+        total = sum(size for _path, size in entries)
         if not messagebox.askyesno(
                 _("清空缓存"),
                 _("将删除缓存目录里的 {n} 个临时工程，约释放 {size}。\n\n继续吗？").format(
                     n=len(entries), size=_size_text(total)),
                 parent=self):
+            self._refresh_cache_info()
             return
 
         removed = 0
-        for entry in entries:
-            shutil.rmtree(entry, ignore_errors=True)
-            if not entry.exists():
+        for path, _size in entries:
+            shutil.rmtree(path, ignore_errors=True)
+            if not path.exists():
                 removed += 1
 
         messagebox.showinfo(
@@ -348,6 +398,16 @@ class PreferencesDialog(tk.Toplevel):
                 n=removed, size=_size_text(total)),
             parent=self)
         self._refresh_cache_info()
+
+    def destroy(self) -> None:
+        # 关窗口时把挂起的后台轮询取消掉，免得回调打到已销毁的控件上
+        if self._cache_job is not None:
+            try:
+                self.after_cancel(self._cache_job)
+            except tk.TclError:
+                pass
+            self._cache_job = None
+        super().destroy()
 
     def _persist(self) -> bool:
         try:

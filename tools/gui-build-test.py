@@ -37,6 +37,24 @@ def main() -> int:
     project = Path(sys.argv[1]).resolve()
     out_dir = Path(sys.argv[2]).resolve() if len(sys.argv) > 2 else None
 
+    # 打包前会「保存工程」——跑完把原文件写回去，别改动仓库/用户手里的工程文件。
+    try:
+        original = project.read_bytes()
+    except OSError as exc:
+        print("读不了工程文件：", exc)
+        return 2
+
+    try:
+        return _run(project, out_dir)
+    finally:
+        try:
+            project.write_bytes(original)
+            print("（已把工程文件还原）")
+        except OSError:
+            pass
+
+
+def _run(project: Path, out_dir: Path | None) -> int:
     window = MainWindow(project)
     window.attributes("-topmost", True)
     window.update()

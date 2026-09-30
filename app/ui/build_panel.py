@@ -15,6 +15,7 @@ from tkinter import messagebox, ttk
 from ..checks import check_project, split
 from ..core import demo
 from ..core.errors import PackError
+from ..core.serialize import save_project
 from ..engine import assets
 from ..engine.makensis import compile_nsi, find_makensis
 from ..engine.nsi import MODE_LABELS, NsiGenerator, output_file_name
@@ -45,6 +46,8 @@ class BuildPanel(ttk.Frame):
         self.window = None                 # 主窗口会填进来（打包前先 flush 全部页面）
         self._busy = False
         self._action = "validate"
+        self._need_save = False          # 这次操作是否需要先保存工程
+        self._saved_ok = False           # 后台保存是否成功（成功后清掉“未保存”标记）
         self._queue: queue.Queue = queue.Queue()
         self._produced: list[Path] = []
         self._pump_job = None
@@ -107,6 +110,13 @@ class BuildPanel(ttk.Frame):
         self.log.see("end")
         self.log.configure(state="disabled")
 
+    def log_error(self, text: str) -> None:
+        """把一段（异常）文本写进日志；界面已销毁时安静地忽略。"""
+        try:
+            self._append(text.rstrip())
+        except tk.TclError:
+            pass
+
     def _clear_log(self) -> None:
         self.log.configure(state="normal")
         self.log.delete("1.0", "end")
@@ -125,6 +135,10 @@ class BuildPanel(ttk.Frame):
             while True:
                 item = self._queue.get_nowait()
                 if item is None:
+                    if self._saved_ok:
+                        # 后台保存成功 → 回主线程清掉“未保存”标记并刷新标题栏
+                        self.app.dirty = False
+                        self.app.notify()
                     self._close_progress()
                     self._set_busy(False)
                     return
@@ -149,6 +163,11 @@ class BuildPanel(ttk.Frame):
                     self._begin_build(item[1])
         except queue.Empty:
             pass
+        except Exception as exc:  # noqa: BLE001 - 收尾出错不能把界面永久锁死
+            self.log_error(_("出错了：") + repr(exc))
+            self._close_progress()
+            self._set_busy(False)
+            return
         if self._busy and self.winfo_exists():
             self._pump_job = self.after(120, self._pump)
         else:
@@ -291,25 +310,17 @@ class BuildPanel(ttk.Frame):
             return
 
         self._append_warnings(warnings)
-        if demo.is_demo(project.source_path):
+        # 保存工程（单文件工程要重新打包，可能很慢）放到后台线程里做：
+        # 在主线程保存会让大工程「卡住且没有任何反馈」。
+        self._need_save = not demo.is_demo(project.source_path)
+        self._saved_ok = False
+        if not self._need_save:
             self._append(_("（演示项目不会保存工程文件，只做本次测试。）"))
-            self._append("")
-        else:
-            try:
-                saved = self.app.save()
-            except Exception as exc:  # noqa: BLE001 - 保存失败要原样告诉用户
-                messagebox.showerror(_("保存工程失败"), str(exc),
-                                     parent=self.winfo_toplevel())
-                self._close_progress()
-                self._set_busy(False)
-                return
-            self._append(_("工程已保存：") + str(saved))
             self._append("")
 
         self._queue = queue.Queue()
-        if self._action == "build":
-            # 校验通过、真要打包了，才弹进度窗
-            self._open_progress(len(project.build.modes))
+        # 校验已经通过，现在就把进度窗开出来（覆盖「保存工程」这一段）
+        self._open_progress(len(project.build.modes))
         threading.Thread(target=self._worker, args=(self._action, project),
                          daemon=True).start()
 
@@ -325,6 +336,17 @@ class BuildPanel(ttk.Frame):
 
     def _worker(self, action: str, project) -> None:
         try:
+            if self._need_save:
+                self._post(_("正在保存工程…"))
+                try:
+                    saved = save_project(project)
+                except Exception as exc:  # noqa: BLE001 - 保存失败就别打包了
+                    self._post("")
+                    self._post(_("保存工程失败：") + str(exc))
+                    return
+                self._saved_ok = True
+                self._post(_("工程已保存：") + str(saved))
+                self._post("")
             modes = list(project.build.modes)
             if action == "generate":
                 for mode in modes:

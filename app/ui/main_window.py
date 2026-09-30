@@ -95,12 +95,16 @@ class MainWindow(tk.Tk):
         self._keep_tutorial = False       # 从欢迎页进来的话，启动窗口这次不抢输入
         self._preview_shown = False
         self._tutorial: TutorialWindow | None = None
+        self._seen_errors: set[str] = set()   # 已经弹过框的错误（避免反复弹）
 
         self.title(app_name())
         self.minsize(980, 680)
         self._center(1120, 780)
         self.app.subscribe(self._on_state_change)
         self.protocol("WM_DELETE_WINDOW", self._on_close)
+        # 窗口版 exe 没有 stderr，Tk 回调里的异常会被静默吞掉（表现为「点了没反应 /
+        # 卡死」）。接管它：写进左侧日志 + 弹一次框，既方便定位，也避免"看起来卡死"。
+        self.report_callback_exception = self._report_exception
 
         self._build_menu()
         self._build_layout()
@@ -408,6 +412,9 @@ class MainWindow(tk.Tk):
         self._version_busy = True
         splash = Splash(self, with_icon=True, show=False, status=status,
                         file_name=file_name)
+        # 版本冻结 / 切换这类操作没有精确进度，用「来回滚动」的进度条，
+        # 否则固定不动的进度条看着像卡死了。
+        splash.set_indeterminate()
         self._splash = splash
         result: dict = {}
         shown_at = {"t": 0.0}
@@ -424,6 +431,7 @@ class MainWindow(tk.Tk):
             if result:
                 return
             splash.show()
+            splash.set_indeterminate()
             shown_at["t"] = time.monotonic()
 
         show_job = self._later(SPLASH_DELAY_MS, show_if_slow)
@@ -762,7 +770,10 @@ class MainWindow(tk.Tk):
         """打包 / 校验期间锁住编辑区和步骤切换，避免用户在后台干活时改数据。"""
         self._editing_locked = not enabled
         for page in self._pages:
-            set_enabled_tree(page.form, enabled)
+            try:
+                set_enabled_tree(page.form, enabled)
+            except tk.TclError:
+                pass
         state = "!disabled" if enabled else "disabled"
         for button in (self.back_button, self.next_button):
             try:
@@ -778,7 +789,10 @@ class MainWindow(tk.Tk):
             # 否则「父项没勾 → 子项变灰」这类状态会被一起解除。
             with self.app.quiet():
                 for page in self._pages:
-                    page.on_enter()
+                    try:
+                        page.on_enter()
+                    except Exception:  # noqa: BLE001 - 一页刷新出错不该把整个界面锁死
+                        self._report_exception(*sys.exc_info())
 
     def flush_all(self) -> None:
         for page in self._pages:
@@ -1037,6 +1051,37 @@ class MainWindow(tk.Tk):
     def _on_close(self) -> None:
         if self._confirm_discard():
             self.destroy()
+
+    def _report_exception(self, exc_type, exc_value, tb) -> None:
+        """把 Tk 回调里未捕获的异常显示出来。
+
+        窗口版 exe 没有 stderr（被指向空设备），Tk 默认会把它悄悄丢掉 —— 用户只看到
+        「点了没反应 / 卡死」。这里改成：写进左侧日志 + 弹一次提示框（同一个错误只弹一次）。
+        """
+        import traceback
+
+        text = "".join(traceback.format_exception(exc_type, exc_value, tb))
+        try:
+            print(text, file=sys.stderr)
+        except Exception:  # noqa: BLE001 - stderr 可能是 devnull
+            pass
+
+        short = f"{exc_type.__name__}: {exc_value}"
+        if short in self._seen_errors:
+            return
+        self._seen_errors.add(short)
+
+        try:
+            self.build_panel.log_error(text)
+        except Exception:  # noqa: BLE001
+            pass
+        try:
+            messagebox.showerror(
+                _("出错了"),
+                _("操作过程中出错了，详情已记到左下角日志：\n\n{err}").format(err=short),
+                parent=self)
+        except Exception:  # noqa: BLE001 - 连弹框都失败就只留日志
+            pass
 
     def open_tutorial(self) -> TutorialWindow:
         """打开「使用教程」窗口。

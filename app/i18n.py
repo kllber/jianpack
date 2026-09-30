@@ -1863,4 +1863,13 @@ EN: dict[str, str] = {
     "安全": "Security",
     "详细信息": "Details",
     "以前的版本": "Previous Versions",
+
+    # -- 卡顿 / 异常可见性修复 --
+    "正在统计缓存占用…": "Counting cache usage…",
+    "正在统计缓存…": "Counting cache…",
+    "出错了": "Something went wrong",
+    "出错了：": "Error: ",
+    "保存工程失败：": "Saving the project failed: ",
+    "操作过程中出错了，详情已记到左下角日志：\n\n{err}":
+        "Something went wrong; details were written to the log at the lower-left:\n\n{err}",
 }

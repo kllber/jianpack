@@ -1541,6 +1541,18 @@ def test_progress_windows(work: Path) -> None:
         panel._update_progress(1, 2, "正在打包…（1/2）", "Out.exe")
         panel._close_progress()
         check("能关闭打包进度窗", panel._progress_window is None)
+
+        # 版本冻结 / 切换走 run_background：进度条也必须是「来回滚动」的
+        result: dict = {}
+        window.run_background(lambda: "ok", lambda value, error: result.update(v=value))
+        bg = window._splash
+        check("版本操作的进度条也是来回滚动的（不是静止的）",
+              bg is not None and str(bg.bar.cget("mode")) == "indeterminate")
+        end = time.time() + 10
+        while time.time() < end and window._version_job is not None:
+            window.update()
+            time.sleep(0.02)
+        check("版本操作的加载窗正常收尾", result.get("v") == "ok" and window._splash is None)
     finally:
         mw.Splash = orig_splash
         if window is not None:
@@ -1657,7 +1669,12 @@ def test_cache_buttons(work: Path) -> None:
 
         btn_clear = find(dialog, "清空缓存文件…")
         check("有「清空缓存文件…」按钮", btn_clear is not None)
-        btn_clear.invoke(); root.update()
+        btn_clear.invoke()
+        # 「清空缓存」现在是后台统计 + 回主线程确认，这里等它真正删完
+        end = time.time() + 20
+        while time.time() < end and drop.exists():
+            root.update()
+            time.sleep(0.02)
         check("本软件的临时工程被清掉", not drop.exists())
         check("正在使用的那个被跳过", keep.exists())
         check("别人放进缓存的东西不动", (foreign / "x.txt").is_file())

@@ -174,15 +174,17 @@ def project_to_dict(project: Project) -> dict:
             "autoClose": uninstall.auto_close,
         },
         "build": {
-            "outputDir": build.output_dir,
+            # outputDir / signCert / signtool 在界面上是「可清空的路径字段」，
+            # 清空后内存里是 None；写盘统一成 ""，保持字段类型稳定（读回来不再有差异）。
+            "outputDir": build.output_dir or "",
             "fileName": build.file_name,
             "compression": build.compression,
             "modes": list(build.modes),
             "signEnabled": build.sign_enabled,
-            "signCert": build.sign_cert,
+            "signCert": build.sign_cert or "",
             "signPassword": build.sign_password,
             "signTimestamp": build.sign_timestamp,
-            "signtool": build.signtool,
+            "signtool": build.signtool or "",
         },
         "integration": {
             "associations": [
