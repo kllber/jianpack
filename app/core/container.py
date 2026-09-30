@@ -632,6 +632,10 @@ def save(target: str | Path, base_dir: str | Path, versions_json: dict,
             directory = dir_of(vid)
             if not directory.is_dir():
                 continue
+            if directory != base_dir and not (directory / PROJECT_JSON).is_file():
+                # 目录只是"半截"（后台还在解 / 上次没解完）→ 不要拿它写数据块，
+                # 保留旧块更安全（下次真正解好后再重写）。
+                continue
             skip = skip_root if directory == base_dir else frozenset()
             slot = old_blocks.get(vid)
             written = None

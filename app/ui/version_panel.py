@@ -217,10 +217,10 @@ class VersionPanel(ttk.Frame):
                 results[current] = folder_size(base, skip={VERSIONS_DIR, "build"})
                 missing: list[str] = []
                 for vid, path in others:
-                    if path.is_dir():
+                    if (path / container.PROJECT_JSON).is_file():
                         results[vid] = folder_size(path)
                     else:
-                        # 数据块还没解到磁盘（懒解压）→ 用容器里记的块大小
+                        # 还没解到磁盘、或后台正在解（目录只是半截）→ 用容器里记的块大小
                         missing.append(vid)
                 if missing and project.is_container:
                     sizes = container.block_sizes(project.source_path)
@@ -250,6 +250,18 @@ class VersionPanel(ttk.Frame):
                     self.tree.set(vid, "size", _size_text(size))
             except tk.TclError:
                 pass
+        self._refresh_after_materialize()
+
+    def _refresh_after_materialize(self) -> None:
+        """后台还在解其它版本时，等它解完再刷一次占用。
+
+        解压过程中 ``versions/<id>/`` 只是**半截**目录，这时占用先用索引里的块大小
+        显示；解完之后再刷一次，换成磁盘上的真实大小。
+        """
+        project = self._project()
+        done = getattr(project, "_materialize_done", None) if project is not None else None
+        if done is not None and not done.is_set():
+            self.schedule_size_refresh(delay=2000)
 
     def _date_format(self) -> str:
         settings = getattr(getattr(self, "window", None), "settings", None)

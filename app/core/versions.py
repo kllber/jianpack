@@ -678,19 +678,35 @@ def folder_size(path: Path, skip: set[str] | None = None) -> int:
     return total
 
 
+def version_dir_ready(directory: Path) -> bool:
+    """这个版本的目录是不是**完整**解出来了。
+
+    后台「打开后把其它版本解出来」进行中时，``versions/<id>/`` 只是个**半截**目录
+    （只解了一部分文件）—— 这时候绝不能拿它算占用，否则会显示成
+    「原本 70 多 MB 的版本只占 4.1 MB」，让人以为丢文件了。
+    """
+    return (directory / "project.json").is_file()
+
+
 def version_size(project, item) -> int:
-    """某个版本占用的磁盘空间（当前版本就是工程根目录，其余是它的快照目录）。"""
+    """某个版本占用的磁盘空间。
+
+    当前版本 = 工程根目录（活的）；其它版本 = 解出来的快照目录。
+    **还没解 / 正在后台解（半截）时，用容器索引里记的数据块大小**，不要用半截目录。
+    """
     if project is None or item is None:
         return 0
     store = load_store(project)
     if item.id == store.current:
         return folder_size(project.base_dir, skip={VERSIONS_DIR, "build"})
     directory = store.dir_for(item.id)
-    if directory.is_dir():
+    if version_dir_ready(directory):
         return folder_size(directory)
     if store.container_path is not None:
-        # 数据块还没解到磁盘 → 用容器里记的块大小
+        # 数据块还没解到磁盘（或正在后台解）→ 用容器里记的块大小
         return container.block_sizes(store.container_path).get(item.id, 0)
+    if directory.is_dir():
+        return folder_size(directory)
     return 0
 
 
